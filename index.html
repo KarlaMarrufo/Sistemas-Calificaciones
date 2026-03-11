@@ -659,11 +659,13 @@ function App() {
     setSyncStatus("syncing");
     try {
       const { config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
-      await fetch(gasUrl, {
-        method: "POST",
-        mode:   "no-cors",
-        body:   JSON.stringify({ action:"save", config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, logo:l }),
+      // Content-Type: text/plain evita el preflight CORS con Google Apps Script
+      const res = await fetch(gasUrl, {
+        method:  "POST",
+        headers: { "Content-Type": "text/plain" },
+        body:    JSON.stringify({ action:"save", config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, logo:l }),
       });
+      if (!res.ok) throw new Error(res.status);
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       setLastSync(now); LS.set("last_sync", now);
       setSyncStatus("ok");
@@ -680,20 +682,21 @@ function App() {
     if (!gasUrl) return;
     setSyncStatus("syncing");
     try {
-      const res = await fetch(`${gasUrl}?action=load`);
+      // redirect: follow para manejar los redirects 302 de Google Apps Script
+      const res = await fetch(`${gasUrl}?action=load`, { redirect: "follow" });
       if (!res.ok) throw new Error(res.status);
       const d = await res.json();
 
-      const apply = (key, setter, lsKey, val) => {
+      const apply = (setter, lsKey, val) => {
         if (val === undefined || val === null) return;
         setter(val); LS.set(lsKey, val);
       };
-      apply("config",    setConfig,    "cfg", d.config);
-      apply("students",  setStudents,  "stu", d.students);
-      apply("weights",   setWeights,   "wts", d.weights);
-      apply("grades",    setGrades,    "grd", d.grades);
-      apply("totals",    setTotals,    "tot", d.totals);
-      apply("rawGrades", setRawGrades, "raw", d.rawGrades);
+      apply(setConfig,    "cfg", d.config);
+      apply(setStudents,  "stu", d.students);
+      apply(setWeights,   "wts", d.weights);
+      apply(setGrades,    "grd", d.grades);
+      apply(setTotals,    "tot", d.totals);
+      apply(setRawGrades, "raw", d.rawGrades);
       if (d.logo !== undefined) {
         setSchoolLogo(d.logo);
         try{ if(d.logo) localStorage.setItem("logo",d.logo); else localStorage.removeItem("logo"); }catch{}
