@@ -184,6 +184,7 @@
     ::-webkit-scrollbar-thumb { background: #3d3d60; border-radius: 3px; }
     /* Animaciones */
     @keyframes fadeIn  { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    @keyframes pulse   { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
     @keyframes fadeUp  { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
     @keyframes pulse   { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.04)} }
     @keyframes spin    { to { transform: rotate(360deg); } }
@@ -226,6 +227,14 @@
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
+
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  ★  CONFIGURACIÓN — PEGAR URL DEL APPS SCRIPT AQUÍ  ★        */
+/*  Solo se cambia esta línea cuando se redespliega el script.   */
+/* ══════════════════════════════════════════════════════════════ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxiHki3ZDCoBgraYf6bYgDc7dCimn3IwjPiK-mUsuz-pNR7JJWEKgatSyd6qCd2yUXo/exec";
+/* ══════════════════════════════════════════════════════════════ */
 
 /* ── Constants ───────────────────────────────────────────────── */
 const SUBJECTS  = ["Lenguajes","Saberes","Ética","Humano"];
@@ -606,16 +615,14 @@ function App() {
   const [session, setSession] = useState(() => {
     const s = LS.get("session");
     if (!s) return null;
-    // Sesión expira en 12 horas
     if (Date.now() - s.loginAt > 12*60*60*1000) { LS.set("session",null); return null; }
     return s;
   });
 
-  const [tab,    setTab]    = useState(null);
-  const [toast,  setToast]  = useState(null);
-  const [syncing,setSyncing]= useState(false);
+  const [tab,   setTab]   = useState(null);
+  const [toast, setToast] = useState(null);
 
-  const [config,     setConfig]     = useState(() => LS.get("cfg") || {year:new Date().getFullYear().toString(),grade:"1°",group:"A",numBimestres:5,schoolName:"Mi Escuela",gasUrl:""});
+  const [config,     setConfig]     = useState(() => LS.get("cfg") || {year:new Date().getFullYear().toString(),grade:"1°",group:"A",numBimestres:5,schoolName:"Mi Escuela"});
   const [students,   setStudents]   = useState(() => LS.get("stu") || []);
   const [weights,    setWeights]    = useState(() => LS.get("wts") || {});
   const [grades,     setGrades]     = useState(() => LS.get("grd") || {});
@@ -623,78 +630,163 @@ function App() {
   const [rawGrades,  setRawGrades]  = useState(() => LS.get("raw") || {});
   const [schoolLogo, setSchoolLogo] = useState(() => localStorage.getItem("logo") || null);
 
-  const isAdmin   = session?.role === "masteradmin";
-  const TABS      = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle|syncing|ok|err
+  const [lastSync,   setLastSync]   = useState(() => LS.get("last_sync") || null);
 
-  // Set default tab on login
-  useEffect(() => {
-    if (session && !tab) setTab(isAdmin ? "config" : "califs");
-  }, [session]);
+  const pushTimer = useRef(null);
+  const pollTimer = useRef(null);
+  const pushing   = useRef(false);
+
+  const isAdmin = session?.role === "masteradmin";
+  const TABS    = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
+  const gasUrl  = GAS_URL;
 
   const showToast = (msg, type="ok") => {
     setToast({msg,type});
     setTimeout(()=>setToast(null),2400);
   };
 
-  const saveConfig    = c => { setConfig(c);     LS.set("cfg",c); };
-  const saveStudents  = s => { setStudents(s);   LS.set("stu",s); };
-  const saveWeights   = w => { setWeights(w);    LS.set("wts",w); };
-  const saveGrades    = g => { setGrades(g);     LS.set("grd",g); };
-  const saveTotals    = t => { setTotals(t);     LS.set("tot",t); };
-  const saveRawGrades = r => { setRawGrades(r);  LS.set("raw",r); };
-  const saveLogo      = b64 => { setSchoolLogo(b64); try{ if(b64) localStorage.setItem("logo",b64); else localStorage.removeItem("logo"); }catch{} };
+  /* ─── Helpers de estado reactivo para el push ─────────────── */
+  const stateRef = useRef({});
+  useEffect(() => {
+    stateRef.current = { config, students, weights, grades, totals, rawGrades, schoolLogo };
+  }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
+
+  /* ─── GAS API ──────────────────────────────────────────────── */
+  const gasPush = async (silent=false) => {
+    if (!gasUrl || pushing.current) return;
+    pushing.current = true;
+    setSyncStatus("syncing");
+    try {
+      const { config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
+      await fetch(gasUrl, {
+        method: "POST",
+        mode:   "no-cors",
+        body:   JSON.stringify({ action:"save", config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, logo:l }),
+      });
+      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      setLastSync(now); LS.set("last_sync", now);
+      setSyncStatus("ok");
+      setTimeout(()=>setSyncStatus("idle"),3000);
+    } catch(e) {
+      setSyncStatus("err");
+      if (!silent) showToast("Error al guardar en la nube","err");
+      setTimeout(()=>setSyncStatus("idle"),5000);
+    }
+    pushing.current = false;
+  };
+
+  const gasPull = async (silent=false) => {
+    if (!gasUrl) return;
+    setSyncStatus("syncing");
+    try {
+      const res = await fetch(`${gasUrl}?action=load`);
+      if (!res.ok) throw new Error(res.status);
+      const d = await res.json();
+
+      const apply = (key, setter, lsKey, val) => {
+        if (val === undefined || val === null) return;
+        setter(val); LS.set(lsKey, val);
+      };
+      apply("config",    setConfig,    "cfg", d.config);
+      apply("students",  setStudents,  "stu", d.students);
+      apply("weights",   setWeights,   "wts", d.weights);
+      apply("grades",    setGrades,    "grd", d.grades);
+      apply("totals",    setTotals,    "tot", d.totals);
+      apply("rawGrades", setRawGrades, "raw", d.rawGrades);
+      if (d.logo !== undefined) {
+        setSchoolLogo(d.logo);
+        try{ if(d.logo) localStorage.setItem("logo",d.logo); else localStorage.removeItem("logo"); }catch{}
+      }
+
+      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      setLastSync(now); LS.set("last_sync", now);
+      setSyncStatus("ok");
+      if (!silent) showToast("☁️ Datos actualizados ✓");
+      setTimeout(()=>setSyncStatus("idle"),3000);
+    } catch(e) {
+      setSyncStatus("err");
+      if (!silent) showToast("Error al obtener datos de la nube","err");
+      setTimeout(()=>setSyncStatus("idle"),5000);
+    }
+  };
+
+  /* Push diferido 8 seg tras el último cambio */
+  const schedulePush = () => {
+    if (!gasUrl) return;
+    clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(()=>gasPush(true), 8000);
+  };
+
+  /* ─── Save helpers — cada guardado dispara sync ────────────── */
+  const saveConfig    = c => { setConfig(c);    LS.set("cfg",c);  schedulePush(); };
+  const saveStudents  = s => { setStudents(s);  LS.set("stu",s);  schedulePush(); };
+  const saveWeights   = w => { setWeights(w);   LS.set("wts",w);  schedulePush(); };
+  const saveGrades    = g => { setGrades(g);    LS.set("grd",g);  schedulePush(); };
+  const saveTotals    = t => { setTotals(t);    LS.set("tot",t);  schedulePush(); };
+  const saveRawGrades = r => { setRawGrades(r); LS.set("raw",r);  schedulePush(); };
+  const saveLogo      = b64 => {
+    setSchoolLogo(b64);
+    try{ if(b64) localStorage.setItem("logo",b64); else localStorage.removeItem("logo"); }catch{}
+    schedulePush();
+  };
+
+  /* Al iniciar sesión → pull automático */
+  useEffect(() => {
+    if (session && !tab) {
+      setTab(isAdmin ? "config" : "califs");
+      if (gasUrl) setTimeout(()=>gasPull(true), 800);
+    }
+  }, [session]);
+
+  /* Polling cada 2 minutos */
+  useEffect(() => {
+    if (!session || !gasUrl) return;
+    pollTimer.current = setInterval(()=>gasPull(true), 2*60*1000);
+    return ()=>clearInterval(pollTimer.current);
+  }, [session, gasUrl]);
 
   const logout = () => {
+    clearTimeout(pushTimer.current);
+    clearInterval(pollTimer.current);
     LS.set("session", null);
-    setSession(null);
-    setTab(null);
+    setSession(null); setTab(null);
     showToast("Sesión cerrada ✓");
   };
 
-  const syncPush = async () => {
-    if (!config.gasUrl) { showToast("Configura la URL de Apps Script primero","err"); return; }
-    setSyncing(true);
-    try {
-      await gasSave(config.gasUrl, {config, students, weights, grades});
-      showToast("☁️ Datos enviados a Google Sheets ✓");
-    } catch(e) { showToast("Error al sincronizar: "+e.message,"err"); }
-    setSyncing(false);
-  };
-
-  const syncPull = async () => {
-    if (!config.gasUrl) { showToast("Configura la URL de Apps Script primero","err"); return; }
-    setSyncing(true);
-    try {
-      const d = await gasLoad(config.gasUrl);
-      if (d.config)   { setConfig(d.config);     LS.set("cfg",d.config); }
-      if (d.students) { setStudents(d.students);  LS.set("stu",d.students); }
-      if (d.weights)  { setWeights(d.weights);    LS.set("wts",d.weights); }
-      if (d.grades)   { setGrades(d.grades);      LS.set("grd",d.grades); }
-      showToast("☁️ Datos descargados desde Google Sheets ✓");
-    } catch(e) { showToast("Error al sincronizar: "+e.message,"err"); }
-    setSyncing(false);
-  };
-
-  if (!session) return <LoginScreen onLogin={s => { setSession(s); }} schoolLogo={schoolLogo} schoolName={config.schoolName} />;
+  if (!session) return <LoginScreen onLogin={s=>setSession(s)} schoolLogo={schoolLogo} schoolName={config.schoolName}/>;
 
   const roleColor = ROLE_COLORS[session.role] || "#4361ee";
   const roleIcon  = ROLE_ICONS[session.role]  || "👤";
 
+  const syncDot = !gasUrl ? null
+    : syncStatus==="syncing" ? {color:"#ffd43b",icon:"⏳",label:"Sync..."}
+    : syncStatus==="ok"     ? {color:"#51cf66",icon:"☁️",label:lastSync||"OK"}
+    : syncStatus==="err"    ? {color:"#ff6b6b",icon:"⚠️",label:"Error"}
+    :                         {color:"#4361ee",icon:"☁️",label:lastSync||"Conectado"};
+
   return (
     <div style={{minHeight:"100vh"}}>
       {/* Header */}
-      <div className="app-header" style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-        <span style={{fontSize:26}}>🏫</span>
+      <div className="app-header" style={{background:"linear-gradient(135deg,#1a1a3e,#0f0f2d)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+        {schoolLogo
+          ? <img src={schoolLogo} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #4361ee44"}}/>
+          : <span style={{fontSize:26}}>🏫</span>}
         <div>
           <div style={{fontSize:16,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
           <div style={{fontSize:11,color:"#7070a0"}}>{config.year} · {config.grade} · Grupo {config.group}</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          {isAdmin && config.gasUrl && (
-            <>
-              <Btn onClick={syncPull} variant="secondary" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>{syncing?"⏳":"⬇️"} Importar</Btn>
-              <Btn onClick={syncPush} variant="warning"   disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>{syncing?"⏳":"⬆️"} Exportar</Btn>
-            </>
+          {/* Indicador sync — silencioso, solo muestra estado */}
+          {syncDot && (
+            <div title={`Sincronización automática · ${syncDot.label}`}
+              style={{display:"flex",alignItems:"center",gap:5,background:"#1a1a2e",
+                border:`1px solid ${syncDot.color}33`,borderRadius:20,padding:"4px 10px",cursor:"default"}}>
+              <span style={{fontSize:12}}>{syncDot.icon}</span>
+              <span style={{fontSize:11,color:syncDot.color,fontWeight:600}}>{syncDot.label}</span>
+              <span style={{width:6,height:6,borderRadius:"50%",background:syncDot.color,
+                animation:syncStatus==="syncing"?"pulse 1s infinite":undefined}}/>
+            </div>
           )}
           {/* User badge */}
           <div style={{display:"flex",alignItems:"center",gap:8,background:"#1a1a2e",border:`1px solid ${roleColor}33`,borderRadius:20,padding:"5px 12px"}}>
@@ -705,8 +797,7 @@ function App() {
             </div>
           </div>
           <button onClick={logout} title="Cerrar sesión"
-            style={{background:"#ff6b6b15",border:"1px solid #ff6b6b33",borderRadius:8,color:"#ff6b6b",
-              padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:600}}>
+            style={{background:"#ff6b6b15",border:"1px solid #ff6b6b33",borderRadius:8,color:"#ff6b6b",padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:600}}>
             🚪
           </button>
         </div>
@@ -715,19 +806,15 @@ function App() {
       {/* Tabs */}
       <div className="tab-bar" style={{display:"flex",background:"#12122a",borderBottom:"1px solid #2d2d4e",overflowX:"auto"}}>
         {TABS.map(t=>{
-          // Split emoji and text for mobile column layout
           const match = t.label.match(/^(\S+)\s(.+)$/);
-          const emoji = match?.[1] || t.label;
-          const text  = match?.[2] || "";
           return (
             <button key={t.id} onClick={()=>setTab(t.id)} style={{
               padding:"12px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
               background:"none",border:"none",display:"flex",alignItems:"center",gap:4,
               borderBottom:tab===t.id?"2px solid #4361ee":"2px solid transparent",
-              color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"
-            }}>
-              <span className="tab-emoji">{emoji}</span>
-              <span className="tab-text">{text}</span>
+              color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"}}>
+              <span className="tab-emoji">{match?.[1]||t.label}</span>
+              <span className="tab-text">{match?.[2]||""}</span>
             </button>
           );
         })}
@@ -735,32 +822,26 @@ function App() {
 
       {/* Content */}
       <div className="main-content" style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
-        {tab==="config"    && <TabConfig   config={config} onSave={saveConfig} schoolLogo={schoolLogo} onSaveLogo={saveLogo} showToast={showToast}/>}
-        {tab==="alumnos"   && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
-        {tab==="califs"    && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} onSave={saveGrades} onSaveRaw={saveRawGrades} showToast={showToast}/>}
-        {tab==="pesos"     && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
-        {tab==="aciertos"  && <TabAciertos config={config} totals={totals} weights={weights} onSaveTotals={saveTotals} showToast={showToast}/>}
-        {tab==="reportes"  && <TabReportes config={config} students={students} grades={grades} weights={weights}/>}
-        {tab==="sync"      && <TabSync     config={config} onSaveConfig={saveConfig} onPush={syncPush} onPull={syncPull} syncing={syncing} showToast={showToast} students={students} grades={grades} weights={weights}/>}
-        {tab==="usuarios"  && isAdmin && <TabUsuarios showToast={showToast}/>}
+        {tab==="config"   && <TabConfig   config={config} onSave={saveConfig} schoolLogo={schoolLogo} onSaveLogo={saveLogo} showToast={showToast}/>}
+        {tab==="alumnos"  && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
+        {tab==="califs"   && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} onSave={saveGrades} onSaveRaw={saveRawGrades} showToast={showToast}/>}
+        {tab==="pesos"    && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
+        {tab==="aciertos" && <TabAciertos config={config} totals={totals} weights={weights} onSaveTotals={saveTotals} showToast={showToast}/>}
+        {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights} schoolLogo={schoolLogo}/>}
+        {tab==="sync"     && isAdmin && <TabSync syncStatus={syncStatus} lastSync={lastSync} onPull={()=>gasPull(false)} onPush={()=>gasPush(false)} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} schoolLogo={schoolLogo}/>}
+        {tab==="usuarios" && isAdmin && <TabUsuarios showToast={showToast}/>}
       </div>
 
-      {/* Toast */}
       {toast && (
         <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
           background:toast.type==="ok"?"#51cf66":"#ff6b6b",color:"#fff",padding:"10px 22px",
-          borderRadius:8,fontWeight:600,fontSize:14,boxShadow:"0 4px 20px #0008",zIndex:999,
-          animation:"fadeIn .2s"}}>
+          borderRadius:8,fontWeight:600,fontSize:14,boxShadow:"0 4px 20px #0008",zIndex:999,animation:"fadeIn .2s"}}>
           {toast.msg}
         </div>
       )}
     </div>
   );
 }
-
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: CONFIGURACIÓN                                            */
-/* ══════════════════════════════════════════════════════════════ */
 function TabConfig({config, onSave, schoolLogo, onSaveLogo, showToast}) {
   const [f,setF] = useState(config);
   const set = k => e => setF(p=>({...p,[k]:e.target.value}));
@@ -1835,7 +1916,7 @@ function TabAciertos({config, totals, weights, onSaveTotals, showToast}) {
 /* ══════════════════════════════════════════════════════════════ */
 /*  TAB: REPORTES                                                 */
 /* ══════════════════════════════════════════════════════════════ */
-function TabReportes({config, students, grades, weights}) {
+function TabReportes({config, students, grades, weights, schoolLogo}) {
   const [subject,  setSubject]  = useState("all");
   const [bimestre, setBimestre] = useState("all");
   const [sortBy,   setSortBy]   = useState("name");
@@ -1868,6 +1949,166 @@ function TabReportes({config, students, grades, weights}) {
 
   const dist={MB:0,B:0,S:0,NS:0};
   sorted.forEach(s=>{const v=getFinal(s.id);if(v!==null)dist[getGrade(v).label]++;});
+
+  /* ── Título dinámico según filtros ── */
+  const reportTitle = () => {
+    const parts = [];
+    if (subject !== "all") parts.push(subject);
+    else parts.push("Todas las materias");
+    if (bimestre !== "all") parts.push(`Bimestre ${bimestre}`);
+    else parts.push("Todos los bimestres");
+    return parts.join(" · ");
+  };
+
+  /* ── Columnas dinámicas según filtros ── */
+  const buildColumns = () => {
+    if (subject === "all") return SUBJECTS.map(s => ({ key: s, label: s }));
+    if (bimestre === "all") return bims.map(b => ({ key: b, label: `Bim. ${b}` }));
+    return [];
+  };
+  const cols = buildColumns();
+
+  const getCellVal = (sid, col) => {
+    if (subject === "all") return (() => {
+      if (bimestre === "all") {
+        const x = bims.map(b=>getAvg(sid,col.key,b)).filter(v=>v!==null);
+        return x.length ? Math.round(x.reduce((a,b)=>a+b,0)/x.length*100)/100 : null;
+      }
+      return getAvg(sid, col.key, parseInt(bimestre));
+    })();
+    if (bimestre === "all") return getAvg(sid, subject, col.key);
+    return null;
+  };
+
+  const gradeColor = v => v>=7?"#1a7a3a":v>=6?"#a07800":"#c0000088";
+  const gradeColorPrint = v => v>=7?"#16a34a":v>=6?"#ca8a04":"#dc2626";
+
+  /* ══ IMPRIMIR ══ */
+  const printReport = () => {
+    const win = window.open("","_blank","width=900,height=700");
+    if (!win) { alert("Activa las ventanas emergentes para imprimir."); return; }
+
+    const logoHtml = schoolLogo
+      ? `<img src="${schoolLogo}" style="width:70px;height:70px;border-radius:12px;object-fit:cover;border:1px solid #ccc;" />`
+      : `<div style="width:70px;height:70px;border-radius:12px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:32px;">🏫</div>`;
+
+    // Build table header
+    const thStyle = `style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;"`;
+    const tdStyle = (v=null) => {
+      const c = v!==null ? (v>=7?"#dcfce7":v>=6?"#fef9c3":"#fee2e2") : "#f8fafc";
+      return `style="border:1px solid #ddd;padding:6px 8px;text-align:center;background:${c};font-size:12px;"`;
+    };
+
+    let thead = `<tr><th ${thStyle} style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;">#</th>
+      <th ${thStyle} style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;">Alumno</th>`;
+    cols.forEach(c => {
+      thead += `<th style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;">${c.label}</th>`;
+    });
+    thead += `<th style="border:1px solid #ccc;padding:7px 10px;background:#0f172a;color:#60efff;font-size:12px;font-weight:800;text-align:center;">PROMEDIO</th></tr>`;
+
+    let tbody = "";
+    sorted.forEach((s,i) => {
+      const final = getFinal(s.id);
+      const rowBg = i%2===0 ? "#fff" : "#f8fafc";
+      tbody += `<tr style="background:${rowBg};">
+        <td style="border:1px solid #ddd;padding:6px 8px;text-align:center;color:#888;font-size:12px;">${i+1}</td>
+        <td style="border:1px solid #ddd;padding:6px 8px;text-align:left;font-weight:600;font-size:12px;">${s.name}</td>`;
+      cols.forEach(col => {
+        const v = getCellVal(s.id, col);
+        tbody += `<td ${tdStyle(v)}>${v!==null?v.toFixed(1):"—"}</td>`;
+      });
+      const badge = final!==null ? getGrade(final).label : "";
+      const finalBg = final!==null ? (final>=7?"#dcfce7":final>=6?"#fef9c3":"#fee2e2") : "#f8fafc";
+      const finalC  = final!==null ? gradeColorPrint(final) : "#999";
+      tbody += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;background:${finalBg};font-weight:800;font-size:13px;color:${finalC};">
+        ${final!==null ? `${final.toFixed(1)} <span style="font-size:10px;background:${finalBg};border:1px solid ${finalC}44;border-radius:3px;padding:1px 4px;">${badge}</span>` : "—"}
+      </td></tr>`;
+    });
+
+    // Group avg row
+    let groupRow = `<tr style="background:#f0f4ff;font-weight:700;">
+      <td colspan="2" style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right;color:#334155;">Promedio del grupo →</td>`;
+    cols.forEach(col => {
+      if (subject === "all") {
+        const avgs = sorted.map(s=>getCellVal(s.id,col)).filter(v=>v!==null);
+        const avg  = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
+        groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-size:12px;">${avg!==null?avg.toFixed(1):"—"}</td>`;
+      } else {
+        const avgs = sorted.map(s=>getAvg(s.id,subject,col.key)).filter(v=>v!==null);
+        const avg  = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
+        groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-size:12px;">${avg!==null?avg.toFixed(1):"—"}</td>`;
+      }
+    });
+    groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-weight:800;font-size:13px;color:#1e40af;">${groupAvg!==null?groupAvg.toFixed(1):"—"}</td></tr>`;
+
+    // Distribution badges
+    const distHtml = [["MB","#16a34a","Muy Bien"],["B","#2563eb","Bien"],["S","#ca8a04","Suficiente"],["NS","#dc2626","No Suficiente"]]
+      .map(([l,c,d]) => `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#555;">
+        <strong style="background:${c}22;color:${c};border:1px solid ${c}44;border-radius:4px;padding:2px 8px;">${l}</strong>
+        ${dist[l]} alumnos — ${d}
+      </span>`).join("");
+
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8"/>
+      <title>Reporte — ${config.schoolName||"Escuela"}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; color: #1e293b; padding: 20px; }
+        @media print {
+          body { padding: 10px; }
+          .no-print { display: none !important; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
+          @page { margin: 15mm; size: landscape; }
+        }
+        table { border-collapse: collapse; width: 100%; }
+      </style>
+    </head><body>
+      <!-- Botón imprimir -->
+      <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;">
+        <button onclick="window.print()" style="background:#1e293b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
+          🖨️ Imprimir / Guardar PDF
+        </button>
+        <button onclick="window.close()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;">
+          ✕ Cerrar
+        </button>
+      </div>
+
+      <!-- Encabezado -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #1e293b;">
+        ${logoHtml}
+        <div style="flex:1;">
+          <div style="font-size:18px;font-weight:800;color:#0f172a;">${config.schoolName||"Sistema de Calificaciones"}</div>
+          <div style="font-size:13px;color:#475569;margin-top:2px;">
+            Ciclo ${config.year||""} &nbsp;·&nbsp; Grado: ${config.grade||""} &nbsp;·&nbsp; Grupo: ${config.group||""}
+          </div>
+          <div style="font-size:15px;font-weight:700;color:#1e40af;margin-top:4px;">
+            📊 ${reportTitle()}
+          </div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:#94a3b8;">
+          Generado: ${new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"})}<br/>
+          Total alumnos: ${sorted.length}
+          ${groupAvg!==null?`<br/><strong style="color:#1e40af;">Promedio grupo: ${groupAvg.toFixed(1)}</strong>`:""}
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <table><thead>${thead}</thead><tbody>${tbody}${groupRow}</tbody></table>
+
+      <!-- Distribución -->
+      <div style="margin-top:16px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+        <strong style="font-size:12px;color:#334155;margin-right:12px;">Distribución:</strong>
+        ${distHtml}
+      </div>
+
+      <!-- Leyenda -->
+      <div style="margin-top:10px;font-size:11px;color:#94a3b8;">
+        MB = Muy Bien (9–10) &nbsp;·&nbsp; B = Bien (7–8.9) &nbsp;·&nbsp; S = Suficiente (6–6.9) &nbsp;·&nbsp; NS = No Suficiente (&lt;6)
+      </div>
+    </body></html>`);
+    win.document.close();
+  };
 
   /* ── Excel export ── */
   const exportExcel = () => {
@@ -1978,17 +2219,23 @@ function TabReportes({config, students, grades, weights}) {
       <h2 style={{marginBottom:6,fontSize:18}}>📊 Reportes y Promedios</h2>
       <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Consulta promedios por alumno, materia y bimestre.</p>
 
-      {/* Export button */}
-      <div style={{marginBottom:16}}>
+      {/* Botones de exportar */}
+      <div style={{marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
         <Btn onClick={exportExcel} disabled={students.length===0}
           style={{background:"linear-gradient(135deg,#1e6f3e,#27a356)",boxShadow:"0 3px 12px #1e6f3e55",display:"inline-flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:16}}>⬇️</span>
           Descargar Excel
           <span style={{fontSize:11,opacity:.8,fontWeight:400}}>(.xlsx)</span>
         </Btn>
-        <div style={{fontSize:11,color:"#5050a0",marginTop:6}}>
-          Genera un archivo con hoja de resumen + una hoja por materia + una hoja por bimestre
-        </div>
+        <Btn onClick={printReport} disabled={students.length===0}
+          style={{background:"linear-gradient(135deg,#1a1a3e,#2d3a6e)",border:"1px solid #4361ee66",boxShadow:"0 3px 12px #4361ee33",display:"inline-flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:16}}>🖨️</span>
+          Imprimir reporte
+          <span style={{fontSize:11,opacity:.8,fontWeight:400}}>PDF / papel</span>
+        </Btn>
+      </div>
+      <div style={{fontSize:11,color:"#5050a0",marginBottom:16}}>
+        El reporte impreso refleja los filtros activos de materia y bimestre seleccionados abajo.
       </div>
 
       {/* Filters */}
@@ -2115,87 +2362,88 @@ function TabReportes({config, students, grades, weights}) {
 /* ══════════════════════════════════════════════════════════════ */
 /*  TAB: SINCRONIZAR                                              */
 /* ══════════════════════════════════════════════════════════════ */
-function TabSync({config, onSaveConfig, onPush, onPull, syncing, showToast, students, grades, weights}) {
-  const [url, setUrl] = useState(config.gasUrl||"");
+function TabSync({syncStatus, lastSync, onPull, onPush,
+                  students, grades, weights, totals, rawGrades, schoolLogo}) {
 
-  const saveUrl = () => {
-    onSaveConfig({...config, gasUrl:url.trim()});
-    showToast("URL de Apps Script guardada ✓");
-  };
-
-  const exportJSON = () => {
-    const data = JSON.stringify({config, students, grades, weights}, null, 2);
-    const blob = new Blob([data],{type:"application/json"});
-    const a = document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download=`calificaciones_${config.year}_${config.group}.json`;
-    a.click();
-    showToast("Respaldo JSON descargado ✓");
-  };
+  const isActive     = GAS_URL && !GAS_URL.includes("XXXX");
+  const statusColor  = syncStatus==="ok"?"#51cf66":syncStatus==="err"?"#ff6b6b":syncStatus==="syncing"?"#ffd43b":"#4361ee";
+  const statusLabel  = syncStatus==="ok" ? `Sincronizado · ${lastSync||""}`
+                     : syncStatus==="err"     ? "Error de conexión"
+                     : syncStatus==="syncing" ? "Sincronizando…"
+                     : isActive               ? `Conectado · ${lastSync||"pendiente"}`
+                     :                          "URL no configurada en el código";
 
   return (
     <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>☁️ Sincronización con Google Sheets</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Conecta tu sistema con Google Sheets para tener respaldo en la nube y acceso desde cualquier dispositivo.</p>
+      <h2 style={{marginBottom:6,fontSize:18}}>☁️ Sincronización Automática</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>
+        Los datos se sincronizan en automático entre todos los dispositivos. No se configura en cada dispositivo —
+        el URL está integrado en la aplicación y se actualiza publicando una nueva versión en GitHub.
+      </p>
 
-      <Card style={{marginBottom:20}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>🔗 URL del Web App (Apps Script)</div>
-        <p style={{fontSize:13,color:"#7070a0",marginBottom:12}}>
-          Sigue el README para crear el script. Pega aquí la URL que te da Google al desplegarlo.
-        </p>
-        <div style={{display:"flex",gap:10}}>
-          <Inp value={url} onChange={e=>setUrl(e.target.value)}
-            placeholder="https://script.google.com/macros/s/AK.../exec"
-            style={{flex:1,fontFamily:"monospace",fontSize:12}}/>
-          <Btn onClick={saveUrl} disabled={!url.trim()}>Guardar URL</Btn>
+      {/* Estado */}
+      <Card style={{marginBottom:20,background:isActive?"#0d1a0d":"#1a1a2e",
+        borderColor:statusColor+"44"}}>
+        <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+          <div style={{fontSize:42}}>{syncStatus==="err"?"⚠️":isActive?"☁️":"🔌"}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:15,fontWeight:800,color:statusColor,marginBottom:4}}>
+              {isActive ? "Sincronización activa" : "URL pendiente de configurar"}
+            </div>
+            <div style={{fontSize:12,color:"#6060a0",lineHeight:1.6}}>
+              {statusLabel}
+              {isActive && " · Auto-sync cada 2 min · Push automático al guardar"}
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+            <div style={{width:12,height:12,borderRadius:"50%",background:statusColor,
+              animation:syncStatus==="syncing"?"pulse 1s infinite":undefined}}/>
+            <div style={{fontSize:10,color:statusColor,fontWeight:700,whiteSpace:"nowrap"}}>
+              {syncStatus==="syncing"?"Sync...":syncStatus==="ok"?"OK":syncStatus==="err"?"Error":isActive?"En línea":"—"}
+            </div>
+          </div>
         </div>
+
+        {isActive && (
+          <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
+            <Btn onClick={onPull} style={{fontSize:13,padding:"8px 18px"}}>⬇️ Actualizar ahora</Btn>
+            <Btn onClick={onPush} variant="secondary" style={{fontSize:13,padding:"8px 18px"}}>⬆️ Forzar subida</Btn>
+          </div>
+        )}
       </Card>
 
-      {config.gasUrl ? (
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
-          <Card style={{textAlign:"center",padding:24}}>
-            <div style={{fontSize:32,marginBottom:10}}>⬆️</div>
-            <div style={{fontWeight:700,marginBottom:6}}>Exportar a Google Sheets</div>
-            <div style={{fontSize:13,color:"#7070a0",marginBottom:14}}>Envía todos los datos locales a tu hoja de cálculo.</div>
-            <Btn onClick={onPush} disabled={syncing} variant="warning" style={{width:"100%"}}>
-              {syncing?"⏳ Exportando...":"⬆️ Exportar ahora"}
-            </Btn>
-          </Card>
-          <Card style={{textAlign:"center",padding:24}}>
-            <div style={{fontSize:32,marginBottom:10}}>⬇️</div>
-            <div style={{fontWeight:700,marginBottom:6}}>Importar desde Google Sheets</div>
-            <div style={{fontSize:13,color:"#7070a0",marginBottom:14}}>Descarga los datos guardados en tu hoja de cálculo.</div>
-            <Btn onClick={onPull} disabled={syncing} variant="secondary" style={{width:"100%"}}>
-              {syncing?"⏳ Importando...":"⬇️ Importar ahora"}
-            </Btn>
-          </Card>
-        </div>
-      ) : (
-        <Card style={{marginBottom:20,background:"#1a1a2e",borderColor:"#ffd43b44",textAlign:"center",padding:24}}>
-          <div style={{fontSize:24,marginBottom:8}}>⚠️</div>
-          <div style={{color:"#ffd43b",fontWeight:600}}>Configura la URL de Apps Script para habilitar la sincronización</div>
-        </Card>
-      )}
-
-      <Card>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>💾 Respaldo Local (JSON)</div>
-        <p style={{fontSize:13,color:"#7070a0",marginBottom:12}}>
-          Descarga un respaldo completo de todos tus datos en formato JSON. Úsalo como copia de seguridad.
-        </p>
-        <Btn onClick={exportJSON} variant="success">⬇️ Descargar Respaldo JSON</Btn>
-      </Card>
-
-      <Card style={{marginTop:14,background:"#12122a"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:8,color:"#c0c0e0"}}>📋 Estado del sistema</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+      {/* Info para el admin */}
+      <Card style={{marginBottom:16,background:"#12122a"}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#c0c0e0",marginBottom:12}}>⚙️ Cómo actualizar el backend</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
           {[
-            ["👥 Alumnos", students.length],
-            ["📊 Registros", Object.keys(grades).length],
-            ["⚖️ Valores config.", Object.keys(weights).length],
+            ["🔧","Edita el archivo <code>index.html</code> en GitHub y cambia el valor de <code>GAS_URL</code>"],
+            ["📤","Para redesplegar Apps Script: Implementar → Administrar implementaciones → ✏️ editar → Nueva versión → Actualizar"],
+            ["✅","Al guardar una nueva versión el Apps Script conserva el mismo URL — no hay que cambiarlo"],
+            ["🌐","Todos los dispositivos reciben el cambio automáticamente la próxima vez que abren la app"],
+          ].map(([icon,text],i)=>(
+            <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+              <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
+              <span style={{fontSize:12,color:"#7070a0",lineHeight:1.5}} dangerouslySetInnerHTML={{__html:text}}/>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Datos locales */}
+      <Card style={{background:"#12122a"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:10,color:"#c0c0e0"}}>📋 Datos en este dispositivo</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
+          {[
+            ["👥 Alumnos",     students.length],
+            ["📊 Registros",   Object.keys(grades).length],
+            ["⚖️ Porcentajes", Object.keys(weights).length],
+            ["🎯 Máximos",     Object.keys(totals).length],
+            ["🖼️ Logotipo",   schoolLogo?"✓ Sí":"✗ No"],
           ].map(([label,val])=>(
             <div key={label} style={{background:"#1a1a2e",borderRadius:8,padding:"10px 14px"}}>
               <div style={{fontSize:11,color:"#7070a0"}}>{label}</div>
-              <div style={{fontSize:20,fontWeight:700,color:"#4361ee"}}>{val}</div>
+              <div style={{fontSize:18,fontWeight:700,color:"#4361ee"}}>{val}</div>
             </div>
           ))}
         </div>
@@ -2204,9 +2452,7 @@ function TabSync({config, onSaveConfig, onPush, onPull, syncing, showToast, stud
   );
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: GESTIÓN DE USUARIOS (solo Master Admin)                  */
-/* ══════════════════════════════════════════════════════════════ */
+
 function TabUsuarios({ showToast }) {
   const getUsers = () => LS.get("sys_users") || DEFAULT_USERS;
   const [users,   setUsers]   = useState(getUsers);
