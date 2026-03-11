@@ -194,7 +194,7 @@
     table { border-collapse: collapse; }
     .login-wrap { animation: fadeUp .5s ease both; }
     .shake-anim { animation: shake .4s ease; }
-    /* Tab bar sticky bottom en móvil */
+    /* Tab bar sticky bottom en móvil — deslizable horizontalmente */
     @media (max-width: 600px) {
       .tab-bar {
         position: fixed !important;
@@ -206,19 +206,26 @@
         border-bottom: none !important;
         background: #0f0f22 !important;
         box-shadow: 0 -4px 20px #00000060;
-        justify-content: space-around !important;
-        overflow-x: visible !important;
+        /* scroll horizontal táctil en iOS */
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        justify-content: flex-start !important;
+        flex-wrap: nowrap !important;
       }
+      .tab-bar::-webkit-scrollbar { display: none; }
       .tab-bar button {
-        flex: 1;
+        flex: 0 0 auto !important;
         flex-direction: column !important;
-        padding: 8px 4px !important;
+        min-width: 64px !important;
+        padding: 8px 10px !important;
         font-size: 10px !important;
         gap: 3px;
       }
-      .tab-bar button .tab-emoji { display: block; font-size: 18px; }
-      .tab-bar button .tab-text  { display: block; font-size: 10px; }
-      .main-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+      .tab-bar button .tab-emoji { display: block; font-size: 20px; }
+      .tab-bar button .tab-text  { display: block; font-size: 10px; white-space: nowrap; }
+      .main-content { padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important; }
       .app-header   { padding: 10px 14px !important; }
     }
   </style>
