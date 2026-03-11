@@ -156,6 +156,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { height: 100%; }
@@ -304,6 +305,20 @@ const LS = {
   get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch{ return null; } },
   set: (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} },
 };
+
+// Restore backup from sessionStorage if present (after cache refresh)
+(()=>{
+  try {
+    const raw = sessionStorage.getItem("__data_backup__");
+    if (raw) {
+      const backup = JSON.parse(raw);
+      Object.entries(backup).forEach(([k,v]) => {
+        if (!localStorage.getItem(k)) localStorage.setItem(k, v); // only restore if missing
+      });
+      sessionStorage.removeItem("__data_backup__");
+    }
+  } catch(e) {}
+})();
 
 /* ── Apps Script API (sync/backup) ──────────────────────────── */
 async function gasLoad(url) {
@@ -531,17 +546,23 @@ function LoginScreen({ onLogin }) {
         <div style={{textAlign:"center",marginTop:12}}>
           <button onClick={async()=>{
             try {
-              // Clear all caches
+              // 1. Backup ALL data to sessionStorage before clearing anything
+              const keys = ["cfg","stu","wts","grd","tot","sys_users"];
+              const backup = {};
+              keys.forEach(k=>{ const v=localStorage.getItem(k); if(v) backup[k]=v; });
+              sessionStorage.setItem("__data_backup__", JSON.stringify(backup));
+
+              // 2. Clear SW caches (NOT localStorage)
               if("caches" in window){
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k=>caches.delete(k)));
+                const cacheKeys = await caches.keys();
+                await Promise.all(cacheKeys.map(k=>caches.delete(k)));
               }
-              // Unregister service workers
+              // 3. Unregister service workers
               if("serviceWorker" in navigator){
                 const regs = await navigator.serviceWorker.getRegistrations();
                 await Promise.all(regs.map(r=>r.unregister()));
               }
-              // Hard reload
+              // 4. Hard reload — data stays in localStorage + sessionStorage backup
               window.location.reload(true);
             } catch(e){ window.location.reload(true); }
           }} style={{
@@ -553,6 +574,7 @@ function LoginScreen({ onLogin }) {
           onMouseOut={e=>{e.currentTarget.style.borderColor="#2d2d4e";e.currentTarget.style.color="#5050a0";}}>
             🔄 Actualizar caché
           </button>
+          <div style={{fontSize:10,color:"#3d3d60",marginTop:5}}>Los datos guardados no se borran</div>
         </div>
       </div>
     </div>
@@ -1470,14 +1492,130 @@ function TabReportes({config, students, grades, weights}) {
   const allA=sorted.map(s=>getFinal(s.id)).filter(v=>v!==null);
   const groupAvg=allA.length? Math.round(allA.reduce((a,b)=>a+b,0)/allA.length*100)/100:null;
 
-  /* distribution */
   const dist={MB:0,B:0,S:0,NS:0};
   sorted.forEach(s=>{const v=getFinal(s.id);if(v!==null)dist[getGrade(v).label]++;});
+
+  /* ── Excel export ── */
+  const exportExcel = () => {
+    if (typeof XLSX === "undefined") { alert("SheetJS no cargó. Verifica tu conexión."); return; }
+    const wb = XLSX.utils.book_new();
+
+    // ── Hoja 1: Resumen general ──
+    const summaryData = [
+      [`Sistema de Calificaciones — ${config.schoolName||"Escuela"}`],
+      [`Ciclo: ${config.year} | Grado: ${config.grade} | Grupo: ${config.group}`],
+      [],
+      ["#","Alumno", ...SUBJECTS.flatMap(s=> bims.map(b=>`${s} B${b}`)), "PROMEDIO FINAL"],
+    ];
+    sorted.forEach((s,i)=>{
+      const row = [i+1, s.name];
+      SUBJECTS.forEach(sub=>{
+        bims.forEach(b=>{
+          const v = getAvg(s.id,sub,b);
+          row.push(v!==null ? parseFloat(v.toFixed(2)) : "");
+        });
+      });
+      const final = getFinal(s.id);
+      row.push(final!==null ? parseFloat(final.toFixed(2)) : "");
+      summaryData.push(row);
+    });
+    // Fila de promedios del grupo
+    summaryData.push([]);
+    const groupRow = ["","PROMEDIO GRUPO"];
+    SUBJECTS.forEach(sub=>{
+      bims.forEach(b=>{
+        const avgs = sorted.map(s=>getAvg(s.id,sub,b)).filter(v=>v!==null);
+        groupRow.push(avgs.length ? parseFloat((avgs.reduce((a,x)=>a+x,0)/avgs.length).toFixed(2)) : "");
+      });
+    });
+    groupRow.push(groupAvg!==null ? parseFloat(groupAvg.toFixed(2)) : "");
+    summaryData.push(groupRow);
+
+    const wsSum = XLSX.utils.aoa_to_sheet(summaryData);
+    // Column widths
+    wsSum["!cols"] = [
+      {wch:4},{wch:28},
+      ...SUBJECTS.flatMap(()=>bims.map(()=>({wch:10}))),
+      {wch:14}
+    ];
+    XLSX.utils.book_append_sheet(wb, wsSum, "Resumen");
+
+    // ── Hoja por cada materia ──
+    SUBJECTS.forEach(sub=>{
+      const subData = [
+        [`${sub} — ${config.schoolName||"Escuela"} ${config.year} Grado ${config.grade} Grupo ${config.group}`],
+        [],
+        ["#","Alumno", ...bims.map(b=>`Bimestre ${b}`), "PROMEDIO"],
+        ...sorted.map((s,i)=>{
+          const bimVals = bims.map(b=>{ const v=getAvg(s.id,sub,b); return v!==null?parseFloat(v.toFixed(2)):""; });
+          const filled  = bimVals.filter(v=>v!=="");
+          const avg     = filled.length ? parseFloat((filled.reduce((a,x)=>a+x,0)/filled.length).toFixed(2)) : "";
+          return [i+1, s.name, ...bimVals, avg];
+        }),
+        [],
+        ["","PROMEDIO GRUPO",
+          ...bims.map(b=>{
+            const avgs=sorted.map(s=>getAvg(s.id,sub,b)).filter(v=>v!==null);
+            return avgs.length?parseFloat((avgs.reduce((a,x)=>a+x,0)/avgs.length).toFixed(2)):"";
+          }),
+          ""
+        ],
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(subData);
+      ws["!cols"] = [{wch:4},{wch:28},...bims.map(()=>({wch:12})),{wch:12}];
+      XLSX.utils.book_append_sheet(wb, ws, sub.substring(0,31));
+    });
+
+    // ── Hoja por bimestre (detalle por criterio) ──
+    bims.forEach(b=>{
+      const bimData = [
+        [`Bimestre ${b} — Detalle por criterio`],
+        [],
+        ["#","Alumno",
+          ...SUBJECTS.flatMap(sub=>CRITERIA.map(c=>`${sub.slice(0,3)}-${C_LABELS[c].slice(0,4)}`)),
+          ...SUBJECTS.map(sub=>`Prom. ${sub}`),
+          "PROMEDIO BIM"
+        ],
+      ];
+      sorted.forEach((s,i)=>{
+        const row=[i+1,s.name];
+        SUBJECTS.forEach(sub=>{
+          CRITERIA.forEach(c=>{
+            const g=grades[`${s.id}-${sub}-${b}`];
+            const v=g?.[c];
+            row.push(v!==undefined&&v!==""?parseFloat(parseFloat(v).toFixed(2)):"");
+          });
+        });
+        SUBJECTS.forEach(sub=>{ const v=getAvg(s.id,sub,b); row.push(v!==null?parseFloat(v.toFixed(2)):""); });
+        const bimAvg=SUBJECTS.map(sub=>getAvg(s.id,sub,b)).filter(v=>v!==null);
+        row.push(bimAvg.length?parseFloat((bimAvg.reduce((a,x)=>a+x,0)/bimAvg.length).toFixed(2)):"");
+        bimData.push(row);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(bimData);
+      XLSX.utils.book_append_sheet(wb, ws, `Bimestre ${b}`);
+    });
+
+    const fname = `Calificaciones_${config.year}_${config.grade}_Grupo${config.group}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  };
 
   return (
     <div>
       <h2 style={{marginBottom:6,fontSize:18}}>📊 Reportes y Promedios</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Consulta promedios por alumno, materia y bimestre.</p>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Consulta promedios por alumno, materia y bimestre.</p>
+
+      {/* Export button */}
+      <div style={{marginBottom:16}}>
+        <Btn onClick={exportExcel} disabled={students.length===0}
+          style={{background:"linear-gradient(135deg,#1e6f3e,#27a356)",boxShadow:"0 3px 12px #1e6f3e55",display:"inline-flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:16}}>⬇️</span>
+          Descargar Excel
+          <span style={{fontSize:11,opacity:.8,fontWeight:400}}>(.xlsx)</span>
+        </Btn>
+        <div style={{fontSize:11,color:"#5050a0",marginTop:6}}>
+          Genera un archivo con hoja de resumen + una hoja por materia + una hoja por bimestre
+        </div>
+      </div>
 
       {/* Filters */}
       <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20,alignItems:"flex-end"}}>
