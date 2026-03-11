@@ -660,25 +660,22 @@ function App() {
   }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
 
   /* ─── GAS API ──────────────────────────────────────────────────
-     PULL → GET  ?action=load   (URL corta, sin CORS)
-     PUSH → POST Content-Type:text/plain  (igual que login del hotel)
-             text/plain = "simple request" CORS → sin preflight
-             GAS responde con CORS headers → podemos leer la respuesta
-     LOGO → POST separado solo en "Forzar subida" (es muy grande)
+     IDÉNTICO AL HOTEL SHERATON:
+     - Todo por POST Content-Type:text/plain (sin preflight CORS)
+     - doPost en GAS redirige a doGet asignando body a e.parameter
+     - Responde con ContentService JSON → CORS automático de Google
   ─────────────────────────────────────────────────────────────── */
 
-  // GET para cargar — URL corta, nunca tiene problema CORS
-  const gasGet = (params) => {
-    const qs = new URLSearchParams(params).toString();
-    return fetch(`${gasUrl}?${qs}`);
+  // Función base igual al hotel — POST text/plain, lee respuesta JSON
+  const gasCall = async (data) => {
+    const res = await fetch(gasUrl, {
+      method:  "POST",
+      headers: { "Content-Type": "text/plain" },
+      body:    JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
   };
-
-  // POST text/plain para guardar — igual que el hotel en su login
-  const gasPost = (body) => fetch(gasUrl, {
-    method:  "POST",
-    headers: { "Content-Type": "text/plain" },
-    body:    JSON.stringify(body),
-  });
 
   const gasPush = async (silent=false, withLogo=false) => {
     if (!gasUrl || pushing.current) return;
@@ -688,16 +685,14 @@ function App() {
       const { config:c, students:s, weights:w, grades:g,
               totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
 
-      const res = await gasPost({
+      const d = await gasCall({
         action:"save", config:c, students:s,
         weights:w, grades:g, totals:t, rawGrades:r,
       });
-      const d = await res.json();
-      if (!d.ok) throw new Error(d.error || "Error al guardar");
+      if (d.error) throw new Error(d.error);
 
-      // Logo separado — solo al forzar subida manual
       if (withLogo && l) {
-        await gasPost({ action:"saveLogo", logo:l });
+        await gasCall({ action:"saveLogo", logo:l });
       }
 
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
@@ -707,7 +702,7 @@ function App() {
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error al guardar: "+e.message,"err");
+      if (!silent) showToast("Error sync: "+e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
     pushing.current = false;
@@ -717,9 +712,8 @@ function App() {
     if (!gasUrl) return;
     setSyncStatus("syncing");
     try {
-      const res = await gasGet({ action:"load" });
-      const d   = await res.json();
-      if (!d.ok) throw new Error(d.error || "Error al cargar");
+      const d = await gasCall({ action:"load" });
+      if (d.error) throw new Error(d.error);
 
       const apply = (setter, lsKey, val) => {
         if (val === undefined || val === null) return;
@@ -743,7 +737,7 @@ function App() {
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error al obtener datos: " + e.message,"err");
+      if (!silent) showToast("Sync error: "+e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
   };
