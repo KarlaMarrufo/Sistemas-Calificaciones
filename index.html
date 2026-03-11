@@ -399,7 +399,7 @@ const TABS = [
 /* ══════════════════════════════════════════════════════════════ */
 /*  LOGIN SCREEN                                                  */
 /* ══════════════════════════════════════════════════════════════ */
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin, schoolLogo, schoolName }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -454,15 +454,26 @@ function LoginScreen({ onLogin }) {
       <div className="login-wrap" style={{
         width:"100%", maxWidth:420, position:"relative", zIndex:1,
       }}>
-        {/* Logo */}
+        {/* Logo / Foto de escuela */}
         <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
-            width:72,height:72,borderRadius:20,
-            background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
-            border:"2px solid #4361ee44",
-            boxShadow:"0 0 32px #4361ee30",
-            fontSize:34,marginBottom:14}}>🏫</div>
-          <div style={{fontSize:22,fontWeight:800,color:"#e8e8f0",letterSpacing:.5}}>Sistema de Calificaciones</div>
+          {schoolLogo ? (
+            <div style={{display:"inline-block",marginBottom:14}}>
+              <img src={schoolLogo} alt="Logo escuela"
+                style={{width:96,height:96,borderRadius:20,objectFit:"cover",
+                  border:"2px solid #4361ee44",
+                  boxShadow:"0 0 32px #4361ee30"}}/>
+            </div>
+          ) : (
+            <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
+              width:80,height:80,borderRadius:20,
+              background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
+              border:"2px solid #4361ee44",
+              boxShadow:"0 0 32px #4361ee30",
+              fontSize:38,marginBottom:14}}>🏫</div>
+          )}
+          <div style={{fontSize:22,fontWeight:800,color:"#e8e8f0",letterSpacing:.5}}>
+            {schoolName || "Sistema de Calificaciones"}
+          </div>
           <div style={{fontSize:13,color:"#6060a0",marginTop:4}}>Accede con tu cuenta institucional</div>
         </div>
 
@@ -609,7 +620,8 @@ function App() {
   const [weights,    setWeights]    = useState(() => LS.get("wts") || {});
   const [grades,     setGrades]     = useState(() => LS.get("grd") || {});
   const [totals,     setTotals]     = useState(() => LS.get("tot") || {});
-  const [rawGrades,  setRawGrades]  = useState(() => LS.get("raw") || {}); // aciertos originales
+  const [rawGrades,  setRawGrades]  = useState(() => LS.get("raw") || {});
+  const [schoolLogo, setSchoolLogo] = useState(() => localStorage.getItem("logo") || null);
 
   const isAdmin   = session?.role === "masteradmin";
   const TABS      = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
@@ -630,6 +642,7 @@ function App() {
   const saveGrades    = g => { setGrades(g);     LS.set("grd",g); };
   const saveTotals    = t => { setTotals(t);     LS.set("tot",t); };
   const saveRawGrades = r => { setRawGrades(r);  LS.set("raw",r); };
+  const saveLogo      = b64 => { setSchoolLogo(b64); try{ if(b64) localStorage.setItem("logo",b64); else localStorage.removeItem("logo"); }catch{} };
 
   const logout = () => {
     LS.set("session", null);
@@ -662,7 +675,7 @@ function App() {
     setSyncing(false);
   };
 
-  if (!session) return <LoginScreen onLogin={s => { setSession(s); }} />;
+  if (!session) return <LoginScreen onLogin={s => { setSession(s); }} schoolLogo={schoolLogo} schoolName={config.schoolName} />;
 
   const roleColor = ROLE_COLORS[session.role] || "#4361ee";
   const roleIcon  = ROLE_ICONS[session.role]  || "👤";
@@ -722,7 +735,7 @@ function App() {
 
       {/* Content */}
       <div className="main-content" style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
-        {tab==="config"    && <TabConfig   config={config} onSave={saveConfig} showToast={showToast}/>}
+        {tab==="config"    && <TabConfig   config={config} onSave={saveConfig} schoolLogo={schoolLogo} onSaveLogo={saveLogo} showToast={showToast}/>}
         {tab==="alumnos"   && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
         {tab==="califs"    && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} onSave={saveGrades} onSaveRaw={saveRawGrades} showToast={showToast}/>}
         {tab==="pesos"     && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
@@ -748,15 +761,75 @@ function App() {
 /* ══════════════════════════════════════════════════════════════ */
 /*  TAB: CONFIGURACIÓN                                            */
 /* ══════════════════════════════════════════════════════════════ */
-function TabConfig({config, onSave, showToast}) {
+function TabConfig({config, onSave, schoolLogo, onSaveLogo, showToast}) {
   const [f,setF] = useState(config);
   const set = k => e => setF(p=>({...p,[k]:e.target.value}));
   const save = () => { onSave(f); showToast("Configuración guardada ✓"); };
+
+  const handleLogoUpload = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("Solo se permiten imágenes","err"); return; }
+    if (file.size > 2*1024*1024) { showToast("La imagen debe ser menor a 2MB","err"); return; }
+    const reader = new FileReader();
+    reader.onload = ev => { onSaveLogo(ev.target.result); showToast("Foto de escuela guardada ✓"); };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div>
       <h2 style={{marginBottom:6,fontSize:18}}>⚙️ Configuración del Ciclo Escolar</h2>
       <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Cada año puedes actualizar estos datos sin borrar a los alumnos.</p>
+
+      {/* Foto de la escuela */}
+      <Card style={{marginBottom:20,background:"#12122a"}}>
+        <div style={{fontSize:14,fontWeight:700,color:"#c0c0e0",marginBottom:14}}>🖼️ Foto / Logo de la Escuela</div>
+        <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+          {/* Preview */}
+          <div style={{flexShrink:0}}>
+            {schoolLogo ? (
+              <img src={schoolLogo} alt="Logo"
+                style={{width:100,height:100,borderRadius:16,objectFit:"cover",
+                  border:"2px solid #4361ee44",boxShadow:"0 0 20px #4361ee20"}}/>
+            ) : (
+              <div style={{width:100,height:100,borderRadius:16,
+                background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
+                border:"2px dashed #2d2d4e",
+                display:"flex",flexDirection:"column",alignItems:"center",
+                justifyContent:"center",gap:4}}>
+                <span style={{fontSize:32}}>🏫</span>
+                <span style={{fontSize:9,color:"#5050a0"}}>Sin foto</span>
+              </div>
+            )}
+          </div>
+          {/* Upload controls */}
+          <div style={{flex:1,minWidth:200}}>
+            <p style={{fontSize:13,color:"#8080b0",marginBottom:12,lineHeight:1.5}}>
+              Esta imagen aparecerá en la <strong style={{color:"#c0c0e0"}}>pantalla de inicio de sesión</strong> como portada de tu sistema.
+              Formatos: JPG, PNG, WEBP. Máximo 2MB.
+            </p>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <label style={{
+                background:"linear-gradient(135deg,#4361ee,#3a0ca3)",
+                color:"#fff",padding:"9px 18px",borderRadius:8,
+                cursor:"pointer",fontSize:13,fontWeight:700,
+                border:"none",display:"inline-block",
+                boxShadow:"0 4px 15px #4361ee40"}}>
+                📁 Seleccionar foto
+                <input type="file" accept="image/*" onChange={handleLogoUpload}
+                  style={{display:"none"}}/>
+              </label>
+              {schoolLogo && (
+                <button onClick={()=>{onSaveLogo(null);showToast("Foto eliminada");}}
+                  style={{background:"#1a1a2e",border:"1px solid #ff6b6b44",borderRadius:8,
+                    color:"#ff6b6b",cursor:"pointer",padding:"9px 16px",fontSize:13,fontWeight:600}}>
+                  🗑 Quitar foto
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16,marginBottom:20}}>
         {[{k:"schoolName",label:"🏫 Nombre de la Escuela",ph:"Mi Escuela"},
