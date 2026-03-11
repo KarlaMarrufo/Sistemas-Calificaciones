@@ -726,7 +726,7 @@ function App() {
         {tab==="alumnos"   && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
         {tab==="califs"    && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} onSave={saveGrades} onSaveRaw={saveRawGrades} showToast={showToast}/>}
         {tab==="pesos"     && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
-        {tab==="aciertos"  && <TabAciertos config={config} totals={totals} onSaveTotals={saveTotals} showToast={showToast}/>}
+        {tab==="aciertos"  && <TabAciertos config={config} totals={totals} weights={weights} onSaveTotals={saveTotals} showToast={showToast}/>}
         {tab==="reportes"  && <TabReportes config={config} students={students} grades={grades} weights={weights}/>}
         {tab==="sync"      && <TabSync     config={config} onSaveConfig={saveConfig} onPush={syncPush} onPull={syncPull} syncing={syncing} showToast={showToast} students={students} grades={grades} weights={weights}/>}
         {tab==="usuarios"  && isAdmin && <TabUsuarios showToast={showToast}/>}
@@ -1506,13 +1506,14 @@ function TabPesos({config, weights, totals, onSave, onSaveTotals, showToast}) {
 /*  TAB: ACIERTOS  (docente + admin)                             */
 /*  Configura el total de reactivos POR MATERIA y POR BIMESTRE  */
 /* ══════════════════════════════════════════════════════════════ */
-function TabAciertos({config, totals, onSaveTotals, showToast}) {
+function TabAciertos({config, totals, weights, onSaveTotals, showToast}) {
   const [subject,  setSubject]  = useState(SUBJECTS[0]);
   const [bimestre, setBimestre] = useState(1);
-  const [local,    setLocal]    = useState({}); // { criterion: value }
+  const [local,    setLocal]    = useState({});
 
   const col  = SUB_COLOR[subject];
   const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+  const w    = weights[`${subject}-${bimestre}`] || DEF_W;
 
   // Load current values for selected subject+bimestre
   useEffect(()=>{
