@@ -14,10 +14,16 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1a1a2e; }
     ::-webkit-scrollbar-thumb { background: #3d3d60; border-radius: 3px; }
-    @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn  { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse   { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.04)} }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes shake   { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+    @keyframes starFloat { 0%{opacity:0;transform:translateY(0)} 50%{opacity:.7} 100%{opacity:0;transform:translateY(-80px)} }
     input:focus, select:focus { border-color: #4361ee !important; outline: none; }
     table { border-collapse: collapse; }
+    .login-wrap { animation: fadeUp .5s ease both; }
+    .shake-anim { animation: shake .4s ease; }
   </style>
 </head>
 <body>
@@ -38,6 +44,39 @@ const SUB_COLOR = {
 };
 const DEF_W = { tareas:20, trabajos:20, disciplina:20, examen:40 };
 const uid   = () => Math.random().toString(36).slice(2,10);
+
+/* ── Auth ────────────────────────────────────────────────────── */
+// Simple hash (djb2) — suficiente para cliente sin servidor
+function hashStr(s) {
+  let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h)+s.charCodeAt(i)|0;
+  return (h>>>0).toString(16);
+}
+
+// Usuarios por defecto — Master Admin puede cambiarlos desde el sistema
+const DEFAULT_USERS = [
+  { id:"u1", username:"karlamarrufo", passHash: hashStr("Karla2026"), role:"docente",      name:"Karla Marrufo",  active:true },
+  { id:"u2", username:"edelchavez",   passHash: hashStr("Edel2026"),  role:"masteradmin",  name:"Edel Chávez",    active:true },
+];
+
+const ROLE_LABELS = { docente:"Docente", masteradmin:"Master Admin" };
+const ROLE_COLORS = { docente:"#4dabf7", masteradmin:"#ffd43b" };
+const ROLE_ICONS  = { docente:"👩‍🏫", masteradmin:"🛡️" };
+
+// Tabs por rol
+const TABS_DOCENTE = [
+  {id:"califs",   label:"✏️ Calificaciones"},
+  {id:"alumnos",  label:"👥 Alumnos"},
+  {id:"reportes", label:"📊 Reportes"},
+];
+const TABS_ADMIN = [
+  {id:"config",   label:"⚙️ Configuración"},
+  {id:"alumnos",  label:"👥 Alumnos"},
+  {id:"califs",   label:"✏️ Calificaciones"},
+  {id:"pesos",    label:"⚖️ Valores"},
+  {id:"reportes", label:"📊 Reportes"},
+  {id:"sync",     label:"☁️ Sincronizar"},
+  {id:"usuarios", label:"🔑 Usuarios"},
+];
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function getGrade(v) {
@@ -137,10 +176,175 @@ const TABS = [
 ];
 
 /* ══════════════════════════════════════════════════════════════ */
+/*  LOGIN SCREEN                                                  */
+/* ══════════════════════════════════════════════════════════════ */
+function LoginScreen({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [shake,    setShake]    = useState(false);
+
+  const getUsers = () => LS.get("sys_users") || DEFAULT_USERS;
+
+  const doLogin = () => {
+    if (!username.trim() || !password.trim()) { triggerError("Ingresa tu usuario y contraseña"); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const users = getUsers();
+      const user  = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+      if (!user || !user.active) { setLoading(false); triggerError("Usuario no encontrado o inactivo"); return; }
+      if (user.passHash !== hashStr(password)) { setLoading(false); triggerError("Contraseña incorrecta"); return; }
+      // Guardar sesión
+      LS.set("session", { userId: user.id, username: user.username, name: user.name, role: user.role, loginAt: Date.now() });
+      onLogin({ userId: user.id, username: user.username, name: user.name, role: user.role });
+    }, 700);
+  };
+
+  const triggerError = (msg) => { setError(msg); setShake(true); setTimeout(()=>setShake(false), 500); };
+
+  const stars = Array.from({length:12},(_,i)=>i);
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0d0d1a",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden",padding:16}}>
+      {/* Fondo decorativo */}
+      <div style={{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none"}}>
+        {/* Orbes */}
+        <div style={{position:"absolute",top:"-10%",left:"-5%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,#4361ee18 0%,transparent 70%)"}}/>
+        <div style={{position:"absolute",bottom:"-10%",right:"-5%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,#cc5de818 0%,transparent 70%)"}}/>
+        <div style={{position:"absolute",top:"40%",right:"10%",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,#4dabf710 0%,transparent 70%)"}}/>
+        {/* Grid */}
+        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
+        {/* Floating stars */}
+        {stars.map(i=>(
+          <div key={i} style={{
+            position:"absolute",
+            left:`${8+i*7}%`, top:`${15+((i*37)%70)}%`,
+            width: i%3===0?3:2, height: i%3===0?3:2,
+            borderRadius:"50%", background:"#ffffff",
+            opacity: 0,
+            animation:`starFloat ${3+i*0.4}s ease-in-out ${i*0.3}s infinite`,
+          }}/>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="login-wrap" style={{
+        width:"100%", maxWidth:420, position:"relative", zIndex:1,
+      }}>
+        {/* Logo */}
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
+            width:72,height:72,borderRadius:20,
+            background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
+            border:"2px solid #4361ee44",
+            boxShadow:"0 0 32px #4361ee30",
+            fontSize:34,marginBottom:14}}>🏫</div>
+          <div style={{fontSize:22,fontWeight:800,color:"#e8e8f0",letterSpacing:.5}}>Sistema de Calificaciones</div>
+          <div style={{fontSize:13,color:"#6060a0",marginTop:4}}>Accede con tu cuenta institucional</div>
+        </div>
+
+        {/* Form card */}
+        <div className={shake?"shake-anim":""} style={{
+          background:"#12122a",
+          border:"1px solid #2d2d4e",
+          borderRadius:16,
+          padding:32,
+          boxShadow:"0 20px 60px #00000060",
+        }}>
+          {/* Usuario */}
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:12,color:"#8080b0",fontWeight:600,display:"block",marginBottom:6,letterSpacing:.5}}>USUARIO</label>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:16}}>👤</span>
+              <input
+                type="text" value={username}
+                onChange={e=>{setUsername(e.target.value);setError("");}}
+                onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                placeholder="Nombre de usuario"
+                style={{width:"100%",background:"#1a1a2e",border:`1px solid ${error?"#ff6b6b66":"#2d2d4e"}`,
+                  borderRadius:8,color:"#e8e8f0",padding:"10px 12px 10px 38px",fontSize:14,transition:"border-color .2s"}}
+              />
+            </div>
+          </div>
+
+          {/* Contraseña */}
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:12,color:"#8080b0",fontWeight:600,display:"block",marginBottom:6,letterSpacing:.5}}>CONTRASEÑA</label>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:16}}>🔒</span>
+              <input
+                type={showPass?"text":"password"} value={password}
+                onChange={e=>{setPassword(e.target.value);setError("");}}
+                onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                placeholder="••••••••"
+                style={{width:"100%",background:"#1a1a2e",border:`1px solid ${error?"#ff6b6b66":"#2d2d4e"}`,
+                  borderRadius:8,color:"#e8e8f0",padding:"10px 38px 10px 38px",fontSize:14,transition:"border-color .2s"}}
+              />
+              <button onClick={()=>setShowPass(p=>!p)}
+                style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+                  background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#7070a0",padding:4}}>
+                {showPass?"🙈":"👁️"}
+              </button>
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{background:"#ff6b6b15",border:"1px solid #ff6b6b44",borderRadius:8,
+              padding:"8px 12px",marginBottom:16,fontSize:13,color:"#ff6b6b",display:"flex",gap:8,alignItems:"center"}}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Botón */}
+          <button onClick={doLogin} disabled={loading}
+            style={{width:"100%",background:"linear-gradient(135deg,#4361ee,#7048c8)",
+              color:"#fff",border:"none",borderRadius:8,padding:"12px",fontSize:15,fontWeight:700,
+              cursor:loading?"not-allowed":"pointer",opacity:loading?0.7:1,
+              boxShadow:"0 4px 20px #4361ee44",transition:"opacity .2s",letterSpacing:.3}}>
+            {loading ? (
+              <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                <span style={{display:"inline-block",width:16,height:16,border:"2px solid #ffffff60",
+                  borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+                Verificando...
+              </span>
+            ) : "Iniciar Sesión →"}
+          </button>
+        </div>
+
+        {/* Perfiles hint */}
+        <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+          {[{role:"docente",icon:"👩‍🏫",label:"Docente"},{role:"masteradmin",icon:"🛡️",label:"Master Admin"}].map(p=>(
+            <div key={p.role} style={{
+              background:"#12122a",border:`1px solid ${ROLE_COLORS[p.role]}33`,borderRadius:8,
+              padding:"6px 14px",fontSize:12,color:ROLE_COLORS[p.role],display:"flex",alignItems:"center",gap:6
+            }}>{p.icon} {p.label}</div>
+          ))}
+        </div>
+
+        <div style={{textAlign:"center",marginTop:16,fontSize:11,color:"#3d3d60"}}>
+          Sistema de Calificaciones Escolar · Acceso restringido
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
 /*  ROOT APP                                                      */
 /* ══════════════════════════════════════════════════════════════ */
 function App() {
-  const [tab,    setTab]    = useState("config");
+  const [session, setSession] = useState(() => {
+    const s = LS.get("session");
+    if (!s) return null;
+    // Sesión expira en 12 horas
+    if (Date.now() - s.loginAt > 12*60*60*1000) { LS.set("session",null); return null; }
+    return s;
+  });
+
+  const [tab,    setTab]    = useState(null);
   const [toast,  setToast]  = useState(null);
   const [syncing,setSyncing]= useState(false);
 
@@ -148,6 +352,14 @@ function App() {
   const [students, setStudents] = useState(() => LS.get("stu") || []);
   const [weights,  setWeights]  = useState(() => LS.get("wts") || {});
   const [grades,   setGrades]   = useState(() => LS.get("grd") || {});
+
+  const isAdmin   = session?.role === "masteradmin";
+  const TABS      = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
+
+  // Set default tab on login
+  useEffect(() => {
+    if (session && !tab) setTab(isAdmin ? "config" : "califs");
+  }, [session]);
 
   const showToast = (msg, type="ok") => {
     setToast({msg,type});
@@ -159,7 +371,13 @@ function App() {
   const saveWeights  = w => { setWeights(w);  LS.set("wts",w); };
   const saveGrades   = g => { setGrades(g);   LS.set("grd",g); };
 
-  /* ── Sync to Apps Script ── */
+  const logout = () => {
+    LS.set("session", null);
+    setSession(null);
+    setTab(null);
+    showToast("Sesión cerrada ✓");
+  };
+
   const syncPush = async () => {
     if (!config.gasUrl) { showToast("Configura la URL de Apps Script primero","err"); return; }
     setSyncing(true);
@@ -184,27 +402,40 @@ function App() {
     setSyncing(false);
   };
 
+  if (!session) return <LoginScreen onLogin={s => { setSession(s); }} />;
+
+  const roleColor = ROLE_COLORS[session.role] || "#4361ee";
+  const roleIcon  = ROLE_ICONS[session.role]  || "👤";
+
   return (
     <div style={{minHeight:"100vh"}}>
       {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"14px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-        <span style={{fontSize:28}}>🏫</span>
+      <div style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+        <span style={{fontSize:26}}>🏫</span>
         <div>
-          <div style={{fontSize:17,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
-          <div style={{fontSize:12,color:"#7070a0"}}>{config.year} · {config.grade} Grado · Grupo {config.group} · {config.numBimestres} Bimestres</div>
+          <div style={{fontSize:16,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
+          <div style={{fontSize:11,color:"#7070a0"}}>{config.year} · {config.grade} Grado · Grupo {config.group} · {config.numBimestres} Bimestres</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          {config.gasUrl && (
+          {isAdmin && config.gasUrl && (
             <>
-              <Btn onClick={syncPull} variant="secondary" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>
-                {syncing?"⏳":"⬇️"} Importar
-              </Btn>
-              <Btn onClick={syncPush} variant="warning" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>
-                {syncing?"⏳":"⬆️"} Exportar
-              </Btn>
+              <Btn onClick={syncPull} variant="secondary" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>{syncing?"⏳":"⬇️"} Importar</Btn>
+              <Btn onClick={syncPush} variant="warning"   disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>{syncing?"⏳":"⬆️"} Exportar</Btn>
             </>
           )}
-          <span style={{color:"#7070a0",fontSize:12}}>{students.length} alumno{students.length!==1?"s":""}</span>
+          {/* User badge */}
+          <div style={{display:"flex",alignItems:"center",gap:8,background:"#1a1a2e",border:`1px solid ${roleColor}33`,borderRadius:20,padding:"5px 12px"}}>
+            <span style={{fontSize:14}}>{roleIcon}</span>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#e8e8f0",lineHeight:1.2}}>{session.name}</div>
+              <div style={{fontSize:10,color:roleColor,fontWeight:600}}>{ROLE_LABELS[session.role]}</div>
+            </div>
+          </div>
+          <button onClick={logout} title="Cerrar sesión"
+            style={{background:"#ff6b6b15",border:"1px solid #ff6b6b33",borderRadius:8,color:"#ff6b6b",
+              padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:600}}>
+            🚪 Salir
+          </button>
         </div>
       </div>
 
@@ -228,6 +459,7 @@ function App() {
         {tab==="pesos"    && <TabPesos    config={config} weights={weights} onSave={saveWeights} showToast={showToast}/>}
         {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights}/>}
         {tab==="sync"     && <TabSync     config={config} onSaveConfig={saveConfig} onPush={syncPush} onPull={syncPull} syncing={syncing} showToast={showToast} students={students} grades={grades} weights={weights}/>}
+        {tab==="usuarios" && isAdmin && <TabUsuarios showToast={showToast}/>}
       </div>
 
       {/* Toast */}
@@ -903,6 +1135,202 @@ function TabSync({config, onSaveConfig, onPush, onPull, syncing, showToast, stud
           ))}
         </div>
       </Card>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: GESTIÓN DE USUARIOS (solo Master Admin)                  */
+/* ══════════════════════════════════════════════════════════════ */
+function TabUsuarios({ showToast }) {
+  const getUsers = () => LS.get("sys_users") || DEFAULT_USERS;
+  const [users,   setUsers]   = useState(getUsers);
+  const [editId,  setEditId]  = useState(null);
+  const [newPass, setNewPass] = useState("");
+  const [showNew, setShowNew] = useState(false);
+  const [form,    setForm]    = useState({ username:"", name:"", password:"", role:"docente" });
+  const [showFormPass, setShowFormPass] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const save = (u) => { LS.set("sys_users", u); setUsers(u); };
+
+  const toggleActive = (id) => {
+    const current = users.find(u=>u.id===id);
+    if (current?.role==="masteradmin" && users.filter(u=>u.role==="masteradmin"&&u.active).length<=1) {
+      showToast("Debe existir al menos un Master Admin activo","err"); return;
+    }
+    save(users.map(u=>u.id===id?{...u,active:!u.active}:u));
+    showToast("Estado actualizado ✓");
+  };
+
+  const changePass = (id) => {
+    if (newPass.length < 6) { showToast("La contraseña debe tener al menos 6 caracteres","err"); return; }
+    save(users.map(u=>u.id===id?{...u,passHash:hashStr(newPass)}:u));
+    setEditId(null); setNewPass(""); showToast("Contraseña actualizada ✓");
+  };
+
+  const addUser = () => {
+    if (!form.username.trim()||!form.name.trim()||!form.password.trim())
+      { showToast("Completa todos los campos","err"); return; }
+    if (form.password.length<6) { showToast("Contraseña mínima 6 caracteres","err"); return; }
+    if (users.find(u=>u.username.toLowerCase()===form.username.toLowerCase()))
+      { showToast("Ese usuario ya existe","err"); return; }
+    const newUser = { id:uid(), username:form.username.trim(), name:form.name.trim(),
+      passHash:hashStr(form.password), role:form.role, active:true };
+    save([...users, newUser]);
+    setForm({username:"",name:"",password:"",role:"docente"});
+    setShowNew(false);
+    showToast(`Usuario "${newUser.name}" creado ✓`);
+  };
+
+  const delUser = (id) => {
+    const u = users.find(x=>x.id===id);
+    if (u?.role==="masteradmin" && users.filter(x=>x.role==="masteradmin"&&x.active).length<=1)
+      { showToast("No puedes eliminar el único Master Admin","err"); setConfirmDel(null); return; }
+    save(users.filter(x=>x.id!==id));
+    showToast(`"${u?.name}" eliminado`); setConfirmDel(null);
+  };
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>🔑 Gestión de Usuarios</h2>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:20}}>
+        <p style={{color:"#7070a0",fontSize:13,flex:1}}>Administra los accesos al sistema. Solo el Master Admin puede ver esta sección.</p>
+        <Btn onClick={()=>setShowNew(p=>!p)} variant={showNew?"secondary":"primary"}>
+          {showNew?"✕ Cancelar":"➕ Nuevo Usuario"}
+        </Btn>
+      </div>
+
+      {/* Formulario nuevo usuario */}
+      {showNew && (
+        <Card style={{marginBottom:20,borderColor:"#4361ee44"}}>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:"#c0c0e0"}}>➕ Crear Nuevo Usuario</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:12}}>
+            <div>
+              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Nombre completo</div>
+              <Inp value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nombre Apellido"/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Usuario (sin espacios)</div>
+              <Inp value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value.replace(/\s/g,"")}))} placeholder="nombreusuario"/>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Contraseña (mín. 6 caracteres)</div>
+              <div style={{position:"relative"}}>
+                <Inp type={showFormPass?"text":"password"} value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder="••••••••"/>
+                <button onClick={()=>setShowFormPass(p=>!p)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#7070a0"}}>
+                  {showFormPass?"🙈":"👁️"}
+                </button>
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Perfil</div>
+              <Sel value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
+                <option value="docente">👩‍🏫 Docente</option>
+                <option value="masteradmin">🛡️ Master Admin</option>
+              </Sel>
+            </div>
+          </div>
+          <Btn onClick={addUser} variant="success">✓ Crear Usuario</Btn>
+        </Card>
+      )}
+
+      {/* Lista de usuarios */}
+      <div style={{display:"grid",gap:10}}>
+        {users.map(u => {
+          const rc = ROLE_COLORS[u.role];
+          return (
+            <Card key={u.id} style={{border:`1px solid ${u.active?rc+"33":"#3d3d4e"}`,opacity:u.active?1:0.6}}>
+              <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+                {/* Avatar */}
+                <div style={{width:44,height:44,borderRadius:12,background:`${rc}20`,border:`2px solid ${rc}44`,
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
+                  {ROLE_ICONS[u.role]}
+                </div>
+                {/* Info */}
+                <div style={{flex:1,minWidth:120}}>
+                  <div style={{fontWeight:700,fontSize:15,color:"#e8e8f0"}}>{u.name}</div>
+                  <div style={{fontSize:12,color:"#7070a0"}}>@{u.username}</div>
+                  <div style={{marginTop:4,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                    <span style={{background:rc+"22",color:rc,border:`1px solid ${rc}44`,
+                      borderRadius:4,fontSize:10,padding:"1px 7px",fontWeight:700}}>
+                      {ROLE_ICONS[u.role]} {ROLE_LABELS[u.role]}
+                    </span>
+                    <span style={{background:u.active?"#51cf6622":"#ff6b6b22",
+                      color:u.active?"#51cf66":"#ff6b6b",
+                      border:`1px solid ${u.active?"#51cf6644":"#ff6b6b44"}`,
+                      borderRadius:4,fontSize:10,padding:"1px 7px",fontWeight:700}}>
+                      {u.active?"● Activo":"○ Inactivo"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Acciones */}
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  {editId===u.id ? (
+                    <>
+                      <div style={{position:"relative"}}>
+                        <Inp type="password" value={newPass} onChange={e=>setNewPass(e.target.value)}
+                          placeholder="Nueva contraseña" style={{width:180}}/>
+                      </div>
+                      <Btn onClick={()=>changePass(u.id)} variant="success" style={{padding:"5px 12px"}}>✓ Guardar</Btn>
+                      <Btn onClick={()=>{setEditId(null);setNewPass("");}} variant="secondary" style={{padding:"5px 10px"}}>✕</Btn>
+                    </>
+                  ) : (
+                    <>
+                      <Btn onClick={()=>setEditId(u.id)} variant="secondary" style={{padding:"6px 10px",fontSize:12}}>🔑 Cambiar contraseña</Btn>
+                      <Btn onClick={()=>toggleActive(u.id)} variant={u.active?"warning":"success"} style={{padding:"6px 10px",fontSize:12}}>
+                        {u.active?"⏸ Desactivar":"▶ Activar"}
+                      </Btn>
+                      <Btn onClick={()=>setConfirmDel(u.id)} variant="danger" style={{padding:"6px 10px"}}>🗑️</Btn>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Leyenda de perfiles */}
+      <Card style={{marginTop:20,background:"#12122a"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>📋 Permisos por perfil</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div>
+            <div style={{fontSize:12,color:ROLE_COLORS.docente,fontWeight:700,marginBottom:6}}>👩‍🏫 Docente</div>
+            {["✏️ Capturar calificaciones","👥 Gestionar alumnos","📊 Ver reportes"].map(p=>(
+              <div key={p} style={{fontSize:12,color:"#a0a0c0",marginBottom:3}}>✓ {p}</div>
+            ))}
+            {["⚙️ Configuración del sistema","⚖️ Valores de evaluación","☁️ Sincronización","🔑 Gestión de usuarios"].map(p=>(
+              <div key={p} style={{fontSize:12,color:"#4d4d70",marginBottom:3}}>✗ {p}</div>
+            ))}
+          </div>
+          <div>
+            <div style={{fontSize:12,color:ROLE_COLORS.masteradmin,fontWeight:700,marginBottom:6}}>🛡️ Master Admin</div>
+            {["⚙️ Configuración del sistema","👥 Gestionar alumnos","✏️ Capturar calificaciones","⚖️ Valores de evaluación","📊 Ver reportes","☁️ Sincronización","🔑 Gestión de usuarios"].map(p=>(
+              <div key={p} style={{fontSize:12,color:"#a0a0c0",marginBottom:3}}>✓ {p}</div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Confirm delete modal */}
+      {confirmDel && (()=>{
+        const u = users.find(x=>x.id===confirmDel);
+        return (
+          <div style={{position:"fixed",inset:0,background:"#000b",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
+            <Card style={{maxWidth:340,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+              <div style={{fontWeight:700,marginBottom:8}}>¿Eliminar usuario?</div>
+              <div style={{color:"#a0a0c0",fontSize:14,marginBottom:20}}>Se eliminará el acceso de <strong>{u?.name}</strong>.</div>
+              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+                <Btn onClick={()=>delUser(confirmDel)} variant="danger">Sí, eliminar</Btn>
+                <Btn onClick={()=>setConfirmDel(null)} variant="secondary">Cancelar</Btn>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 }
