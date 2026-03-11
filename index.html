@@ -660,17 +660,25 @@ function App() {
   }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
 
   /* ─── GAS API ──────────────────────────────────────────────────
-     IGUAL QUE EL SISTEMA DEL HOTEL:
-     Todo va por GET con URLSearchParams — sin POST, sin CORS.
-     Los datos van codificados como parámetro ?data=JSON
-     El logo se sube por separado solo en "Forzar subida"
-     porque base64 puede ser muy grande para la URL.
+     PULL → GET  ?action=load   (URL corta, sin CORS)
+     PUSH → POST Content-Type:text/plain  (igual que login del hotel)
+             text/plain = "simple request" CORS → sin preflight
+             GAS responde con CORS headers → podemos leer la respuesta
+     LOGO → POST separado solo en "Forzar subida" (es muy grande)
   ─────────────────────────────────────────────────────────────── */
 
+  // GET para cargar — URL corta, nunca tiene problema CORS
   const gasGet = (params) => {
     const qs = new URLSearchParams(params).toString();
     return fetch(`${gasUrl}?${qs}`);
   };
+
+  // POST text/plain para guardar — igual que el hotel en su login
+  const gasPost = (body) => fetch(gasUrl, {
+    method:  "POST",
+    headers: { "Content-Type": "text/plain" },
+    body:    JSON.stringify(body),
+  });
 
   const gasPush = async (silent=false, withLogo=false) => {
     if (!gasUrl || pushing.current) return;
@@ -680,32 +688,26 @@ function App() {
       const { config:c, students:s, weights:w, grades:g,
               totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
 
-      // Datos principales por GET (igual que el hotel)
-      const res = await gasGet({
-        action:    "save",
-        config:    JSON.stringify(c),
-        students:  JSON.stringify(s),
-        weights:   JSON.stringify(w),
-        grades:    JSON.stringify(g),
-        totals:    JSON.stringify(t),
-        rawGrades: JSON.stringify(r),
+      const res = await gasPost({
+        action:"save", config:c, students:s,
+        weights:w, grades:g, totals:t, rawGrades:r,
       });
       const d = await res.json();
       if (!d.ok) throw new Error(d.error || "Error al guardar");
 
-      // Logo por separado solo si se pidió (es muy grande para auto-sync)
+      // Logo separado — solo al forzar subida manual
       if (withLogo && l) {
-        await gasGet({ action:"saveLogo", logo: l });
+        await gasPost({ action:"saveLogo", logo:l });
       }
 
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       setLastSync(now); LS.set("last_sync", now);
       setSyncStatus("ok");
-      if (!silent) showToast("☁️ Datos guardados en la nube ✓");
+      if (!silent) showToast("☁️ Guardado en la nube ✓");
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error al guardar: " + e.message,"err");
+      if (!silent) showToast("Error al guardar: "+e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
     pushing.current = false;
