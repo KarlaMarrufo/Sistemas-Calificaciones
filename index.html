@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema de Calificaciones</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d1a; color: #e8e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    input[type=number]::-webkit-inner-spin-button { opacity: 1; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1a2e; }
+    ::-webkit-scrollbar-thumb { background: #3d3d60; border-radius: 3px; }
+    @keyframes fadeIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    input:focus, select:focus { border-color: #4361ee !important; outline: none; }
+    table { border-collapse: collapse; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ── Constants ───────────────────────────────────────────────── */
+const SUBJECTS  = ["Lenguajes","Saberes","Ética","Humano"];
+const CRITERIA  = ["tareas","trabajos","disciplina","examen"];
+const C_LABELS  = { tareas:"Tareas", trabajos:"Trabajos", disciplina:"Disciplina", examen:"Examen" };
+const C_ICONS   = { tareas:"📋", trabajos:"📝", disciplina:"🎯", examen:"📊" };
+const SUB_COLOR = {
+  Lenguajes:{ bg:"#1e3a5f", accent:"#4dabf7", light:"#d0ebff" },
+  Saberes:  { bg:"#1e472a", accent:"#51cf66", light:"#d3f9d8" },
+  Ética:    { bg:"#3d1f5a", accent:"#cc5de8", light:"#f3d9fa" },
+  Humano:   { bg:"#5a3a1a", accent:"#fd7e14", light:"#ffe8cc" },
+};
+const DEF_W = { tareas:20, trabajos:20, disciplina:20, examen:40 };
+const uid   = () => Math.random().toString(36).slice(2,10);
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function getGrade(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return { label:"–", color:"#888" };
+  if (n >= 9)   return { label:"MB", color:"#51cf66" };
+  if (n >= 7)   return { label:"B",  color:"#4dabf7" };
+  if (n >= 6)   return { label:"S",  color:"#ffd43b" };
+  return              { label:"NS", color:"#ff6b6b" };
+}
+
+function calcAvg(g, w) {
+  const ww = w || DEF_W;
+  const total = CRITERIA.reduce((s,c)=>s+(ww[c]||0),0);
+  if (!total) return null;
+  let sum=0, has=false;
+  for (const c of CRITERIA) {
+    const v = parseFloat(g?.[c]);
+    if (!isNaN(v)) { sum += v*((ww[c]||0)/total); has=true; }
+  }
+  return has ? Math.round(sum*100)/100 : null;
+}
+
+/* ── Local Storage (primary) ─────────────────────────────────── */
+const LS = {
+  get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch{ return null; } },
+  set: (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} },
+};
+
+/* ── Apps Script API (sync/backup) ──────────────────────────── */
+async function gasLoad(url) {
+  const r = await fetch(`${url}?action=load`);
+  if (!r.ok) throw new Error("Error al conectar con Apps Script");
+  return r.json();
+}
+async function gasSave(url, payload) {
+  await fetch(url, {
+    method:"POST",
+    body: JSON.stringify({action:"save",...payload}),
+  });
+}
+
+/* ── UI Atoms ────────────────────────────────────────────────── */
+const Inp = ({value,onChange,placeholder,style,type="text",min,max,step,onKeyDown}) => (
+  <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+    min={min} max={max} step={step} onKeyDown={onKeyDown}
+    style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,color:"#e8e8f0",
+      padding:"7px 10px",fontSize:13,width:"100%",...style}}/>
+);
+
+const Sel = ({value,onChange,children,style}) => (
+  <select value={value} onChange={onChange}
+    style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,color:"#e8e8f0",
+      padding:"7px 10px",fontSize:13,...style}}>{children}</select>
+);
+
+const Btn = ({onClick,children,variant="primary",style,disabled}) => {
+  const V = {
+    primary:  {background:"#4361ee",color:"#fff",border:"none"},
+    secondary:{background:"#2d2d4e",color:"#c0c0e0",border:"1px solid #3d3d60"},
+    danger:   {background:"#ff6b6b22",color:"#ff6b6b",border:"1px solid #ff6b6b44"},
+    success:  {background:"#51cf6622",color:"#51cf66",border:"1px solid #51cf6644"},
+    warning:  {background:"#ffd43b22",color:"#ffd43b",border:"1px solid #ffd43b44"},
+  };
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{...V[variant],borderRadius:7,padding:"7px 14px",fontSize:13,cursor:disabled?"not-allowed":"pointer",
+        opacity:disabled?0.5:1,fontWeight:600,transition:"opacity .15s",whiteSpace:"nowrap",...style}}>
+      {children}
+    </button>
+  );
+};
+
+const Card = ({children,style}) => (
+  <div style={{background:"#16162a",border:"1px solid #2d2d4e",borderRadius:10,padding:16,...style}}>
+    {children}
+  </div>
+);
+
+const Badge = ({value}) => {
+  const g = getGrade(value);
+  return <span style={{background:g.color+"22",color:g.color,border:`1px solid ${g.color}44`,
+    borderRadius:4,fontSize:10,padding:"1px 5px",fontWeight:700,letterSpacing:1}}>{g.label}</span>;
+};
+
+const TH = {padding:"10px 8px",textAlign:"center",fontSize:12,color:"#8080b0",fontWeight:700,borderBottom:"2px solid #2d2d4e"};
+const TD = {padding:"8px 8px",textAlign:"center",fontSize:13,color:"#d0d0e8"};
+
+/* ── TABS ────────────────────────────────────────────────────── */
+const TABS = [
+  {id:"config",    label:"⚙️ Configuración"},
+  {id:"alumnos",   label:"👥 Alumnos"},
+  {id:"califs",    label:"✏️ Calificaciones"},
+  {id:"pesos",     label:"⚖️ Valores"},
+  {id:"reportes",  label:"📊 Reportes"},
+  {id:"sync",      label:"☁️ Sincronizar"},
+];
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  ROOT APP                                                      */
+/* ══════════════════════════════════════════════════════════════ */
+function App() {
+  const [tab,    setTab]    = useState("config");
+  const [toast,  setToast]  = useState(null);
+  const [syncing,setSyncing]= useState(false);
+
+  const [config,   setConfig]   = useState(() => LS.get("cfg") || {year:new Date().getFullYear().toString(),grade:"1°",group:"A",numBimestres:5,schoolName:"Mi Escuela",gasUrl:""});
+  const [students, setStudents] = useState(() => LS.get("stu") || []);
+  const [weights,  setWeights]  = useState(() => LS.get("wts") || {});
+  const [grades,   setGrades]   = useState(() => LS.get("grd") || {});
+
+  const showToast = (msg, type="ok") => {
+    setToast({msg,type});
+    setTimeout(()=>setToast(null),2400);
+  };
+
+  const saveConfig   = c => { setConfig(c);   LS.set("cfg",c); };
+  const saveStudents = s => { setStudents(s); LS.set("stu",s); };
+  const saveWeights  = w => { setWeights(w);  LS.set("wts",w); };
+  const saveGrades   = g => { setGrades(g);   LS.set("grd",g); };
+
+  /* ── Sync to Apps Script ── */
+  const syncPush = async () => {
+    if (!config.gasUrl) { showToast("Configura la URL de Apps Script primero","err"); return; }
+    setSyncing(true);
+    try {
+      await gasSave(config.gasUrl, {config, students, weights, grades});
+      showToast("☁️ Datos enviados a Google Sheets ✓");
+    } catch(e) { showToast("Error al sincronizar: "+e.message,"err"); }
+    setSyncing(false);
+  };
+
+  const syncPull = async () => {
+    if (!config.gasUrl) { showToast("Configura la URL de Apps Script primero","err"); return; }
+    setSyncing(true);
+    try {
+      const d = await gasLoad(config.gasUrl);
+      if (d.config)   { setConfig(d.config);     LS.set("cfg",d.config); }
+      if (d.students) { setStudents(d.students);  LS.set("stu",d.students); }
+      if (d.weights)  { setWeights(d.weights);    LS.set("wts",d.weights); }
+      if (d.grades)   { setGrades(d.grades);      LS.set("grd",d.grades); }
+      showToast("☁️ Datos descargados desde Google Sheets ✓");
+    } catch(e) { showToast("Error al sincronizar: "+e.message,"err"); }
+    setSyncing(false);
+  };
+
+  return (
+    <div style={{minHeight:"100vh"}}>
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"14px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+        <span style={{fontSize:28}}>🏫</span>
+        <div>
+          <div style={{fontSize:17,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
+          <div style={{fontSize:12,color:"#7070a0"}}>{config.year} · {config.grade} Grado · Grupo {config.group} · {config.numBimestres} Bimestres</div>
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          {config.gasUrl && (
+            <>
+              <Btn onClick={syncPull} variant="secondary" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>
+                {syncing?"⏳":"⬇️"} Importar
+              </Btn>
+              <Btn onClick={syncPush} variant="warning" disabled={syncing} style={{fontSize:12,padding:"5px 10px"}}>
+                {syncing?"⏳":"⬆️"} Exportar
+              </Btn>
+            </>
+          )}
+          <span style={{color:"#7070a0",fontSize:12}}>{students.length} alumno{students.length!==1?"s":""}</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",background:"#12122a",borderBottom:"1px solid #2d2d4e",overflowX:"auto"}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{
+            padding:"12px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
+            background:"none",border:"none",
+            borderBottom:tab===t.id?"2px solid #4361ee":"2px solid transparent",
+            color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
+        {tab==="config"   && <TabConfig   config={config} onSave={saveConfig} showToast={showToast}/>}
+        {tab==="alumnos"  && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
+        {tab==="califs"   && <TabCalifs   config={config} students={students} grades={grades} weights={weights} onSave={saveGrades} showToast={showToast}/>}
+        {tab==="pesos"    && <TabPesos    config={config} weights={weights} onSave={saveWeights} showToast={showToast}/>}
+        {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights}/>}
+        {tab==="sync"     && <TabSync     config={config} onSaveConfig={saveConfig} onPush={syncPush} onPull={syncPull} syncing={syncing} showToast={showToast} students={students} grades={grades} weights={weights}/>}
+      </div>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
+          background:toast.type==="ok"?"#51cf66":"#ff6b6b",color:"#fff",padding:"10px 22px",
+          borderRadius:8,fontWeight:600,fontSize:14,boxShadow:"0 4px 20px #0008",zIndex:999,
+          animation:"fadeIn .2s"}}>
+          {toast.msg}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: CONFIGURACIÓN                                            */
+/* ══════════════════════════════════════════════════════════════ */
+function TabConfig({config, onSave, showToast}) {
+  const [f,setF] = useState(config);
+  const set = k => e => setF(p=>({...p,[k]:e.target.value}));
+  const save = () => { onSave(f); showToast("Configuración guardada ✓"); };
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>⚙️ Configuración del Ciclo Escolar</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Cada año puedes actualizar estos datos sin borrar a los alumnos.</p>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16,marginBottom:20}}>
+        {[{k:"schoolName",label:"🏫 Nombre de la Escuela",ph:"Mi Escuela"},
+          {k:"year",      label:"📅 Año Escolar",         ph:"2026"},
+          {k:"grade",     label:"🎓 Grado",               ph:"1°, 2°, 3°..."},
+          {k:"group",     label:"👥 Grupo",               ph:"A, B, C..."},
+        ].map(({k,label,ph})=>(
+          <Card key={k}>
+            <div style={{fontSize:12,color:"#7070a0",marginBottom:6}}>{label}</div>
+            <Inp value={f[k]||""} onChange={set(k)} placeholder={ph}/>
+          </Card>
+        ))}
+        <Card>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:6}}>🗓️ Número de Bimestres</div>
+          <Sel value={f.numBimestres} onChange={e=>setF(p=>({...p,numBimestres:parseInt(e.target.value)}))}>
+            {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n} Bimestre{n>1?"s":""}</option>)}
+          </Sel>
+        </Card>
+      </div>
+
+      <Btn onClick={save} style={{minWidth:160}}>💾 Guardar Configuración</Btn>
+
+      <Card style={{marginTop:24,background:"#12122a"}}>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:10,color:"#c0c0e0"}}>📌 Materias del sistema</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+          {SUBJECTS.map(s=>(
+            <div key={s} style={{background:SUB_COLOR[s].bg,border:`1px solid ${SUB_COLOR[s].accent}44`,
+              borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,color:SUB_COLOR[s].accent}}>
+              {s}
+            </div>
+          ))}
+        </div>
+        <p style={{fontSize:12,color:"#7070a0",marginTop:8}}>Cada materia se evalúa de forma independiente por bimestre.</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: ALUMNOS                                                  */
+/* ══════════════════════════════════════════════════════════════ */
+function TabAlumnos({students, onSave, showToast}) {
+  const [newName,  setNewName]  = useState("");
+  const [editId,   setEditId]   = useState(null);
+  const [editName, setEditName] = useState("");
+  const [search,   setSearch]   = useState("");
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const filtered = students.filter(s=>s.name.toLowerCase().includes(search.toLowerCase()));
+
+  const add = () => {
+    const name = newName.trim(); if (!name) return;
+    if (students.find(s=>s.name.toLowerCase()===name.toLowerCase()))
+      { showToast("Ya existe ese alumno","err"); return; }
+    onSave([...students,{id:uid(),name}]);
+    setNewName(""); showToast(`"${name}" agregado ✓`);
+  };
+
+  const del = id => {
+    const s = students.find(x=>x.id===id);
+    onSave(students.filter(x=>x.id!==id));
+    showToast(`"${s?.name}" eliminado`); setConfirmDel(null);
+  };
+
+  const saveEdit = () => {
+    const name = editName.trim(); if (!name) return;
+    onSave(students.map(s=>s.id===editId?{...s,name}:s));
+    setEditId(null); showToast("Nombre actualizado ✓");
+  };
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>👥 Gestión de Alumnos</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Los alumnos persisten entre ciclos escolares.</p>
+
+      <Card style={{marginBottom:20}}>
+        <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#c0c0e0"}}>➕ Agregar Alumno</div>
+        <div style={{display:"flex",gap:10}}>
+          <Inp value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nombre completo..."
+            onKeyDown={e=>e.key==="Enter"&&add()} style={{flex:1}}/>
+          <Btn onClick={add} disabled={!newName.trim()}>Agregar</Btn>
+        </div>
+      </Card>
+
+      <div style={{display:"flex",gap:10,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
+        <Inp value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar alumno..." style={{maxWidth:280}}/>
+        <span style={{color:"#7070a0",fontSize:13,marginLeft:"auto"}}>{filtered.length} / {students.length} alumnos</span>
+      </div>
+
+      {filtered.length===0 ? (
+        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>
+          {students.length===0?"No hay alumnos. ¡Agrega el primero!":"Sin resultados."}
+        </Card>
+      ) : (
+        <div style={{display:"grid",gap:8}}>
+          {filtered.map((s,i)=>(
+            <Card key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px"}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:"#1a1a3e",border:"1px solid #3d3d70",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#7070c0",flexShrink:0}}>
+                {i+1}
+              </div>
+              {editId===s.id ? (
+                <>
+                  <Inp value={editName} onChange={e=>setEditName(e.target.value)} style={{flex:1}}
+                    onKeyDown={e=>e.key==="Enter"&&saveEdit()}/>
+                  <Btn onClick={saveEdit} variant="success" style={{padding:"5px 12px"}}>✓</Btn>
+                  <Btn onClick={()=>setEditId(null)} variant="secondary" style={{padding:"5px 12px"}}>✕</Btn>
+                </>
+              ) : (
+                <>
+                  <span style={{flex:1,fontWeight:500}}>{s.name}</span>
+                  <Btn onClick={()=>{setEditId(s.id);setEditName(s.name);}} variant="secondary" style={{padding:"5px 10px"}}>✏️</Btn>
+                  <Btn onClick={()=>setConfirmDel(s.id)} variant="danger" style={{padding:"5px 10px"}}>🗑️</Btn>
+                </>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {confirmDel && (()=>{
+        const s = students.find(x=>x.id===confirmDel);
+        return (
+          <div style={{position:"fixed",inset:0,background:"#000a",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
+            <Card style={{maxWidth:340,textAlign:"center"}}>
+              <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+              <div style={{fontWeight:700,marginBottom:8}}>¿Eliminar alumno?</div>
+              <div style={{color:"#a0a0c0",fontSize:14,marginBottom:20}}>
+                Se eliminará a <strong>{s?.name}</strong> y todas sus calificaciones.
+              </div>
+              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+                <Btn onClick={()=>del(confirmDel)} variant="danger">Sí, eliminar</Btn>
+                <Btn onClick={()=>setConfirmDel(null)} variant="secondary">Cancelar</Btn>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: CALIFICACIONES                                           */
+/* ══════════════════════════════════════════════════════════════ */
+function TabCalifs({config, students, grades, weights, onSave, showToast}) {
+  const [subject,  setSubject]  = useState(SUBJECTS[0]);
+  const [bimestre, setBimestre] = useState(1);
+  const [local,    setLocal]    = useState({});
+
+  const col  = SUB_COLOR[subject];
+  const wKey = `${subject}-${bimestre}`;
+  const w    = weights[wKey] || DEF_W;
+
+  useEffect(()=>{
+    const init = {};
+    students.forEach(s=>{
+      init[s.id] = grades[`${s.id}-${subject}-${bimestre}`] || {};
+    });
+    setLocal(init);
+  }, [subject,bimestre,students,grades]);
+
+  const setVal = (sid,crit,val) => setLocal(p=>({...p,[sid]:{...p[sid],[crit]:val}}));
+
+  const saveAll = () => {
+    const next = {...grades};
+    students.forEach(s=>{ next[`${s.id}-${subject}-${bimestre}`] = local[s.id]||{}; });
+    onSave(next);
+    showToast(`${subject} · Bimestre ${bimestre} guardado ✓`);
+  };
+
+  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>✏️ Captura de Calificaciones</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Cada materia y bimestre se guardan de forma independiente.</p>
+
+      {/* Selectors */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:16,marginBottom:16}}>
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Materia</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {SUBJECTS.map(sub=>{
+              const c=SUB_COLOR[sub];
+              return (
+                <button key={sub} onClick={()=>setSubject(sub)} style={{
+                  padding:"8px 14px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13,
+                  background:subject===sub?c.bg:"#1a1a2e",
+                  border:subject===sub?`1px solid ${c.accent}`:"1px solid #2d2d4e",
+                  color:subject===sub?c.accent:"#7070a0",transition:"all .15s"
+                }}>{sub}</button>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Bimestre</div>
+          <div style={{display:"flex",gap:6}}>
+            {bims.map(n=>(
+              <button key={n} onClick={()=>setBimestre(n)} style={{
+                width:38,height:36,borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:14,
+                background:bimestre===n?"#4361ee":"#1a1a2e",
+                border:bimestre===n?"1px solid #4361ee":"1px solid #2d2d4e",
+                color:bimestre===n?"#fff":"#7070a0",
+              }}>{n}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Weights preview */}
+      <Card style={{marginBottom:16,background:col.bg,borderColor:col.accent+"44"}}>
+        <div style={{fontSize:12,color:col.accent,marginBottom:8,fontWeight:700}}>
+          ⚖️ Valores activos — {subject} · Bimestre {bimestre}
+        </div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+          {CRITERIA.map(c=>(
+            <span key={c} style={{fontSize:12,color:col.light}}>
+              {C_ICONS[c]} {C_LABELS[c]}: <strong style={{color:col.accent}}>{w[c]}%</strong>
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      {students.length===0 ? (
+        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>
+          Ve a la pestaña 👥 Alumnos para agregar alumnos.
+        </Card>
+      ) : (
+        <>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",minWidth:580}}>
+              <thead>
+                <tr style={{background:"#12122a"}}>
+                  <th style={TH}>#</th>
+                  <th style={{...TH,textAlign:"left"}}>Alumno</th>
+                  {CRITERIA.map(c=>(
+                    <th key={c} style={TH}>
+                      {C_ICONS[c]} {C_LABELS[c]}<br/>
+                      <span style={{color:"#5050a0",fontWeight:400,fontSize:11}}>{w[c]}%</span>
+                    </th>
+                  ))}
+                  <th style={{...TH,color:col.accent}}>Promedio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((s,i)=>{
+                  const row = local[s.id]||{};
+                  const avg = calcAvg(row,w);
+                  return (
+                    <tr key={s.id} style={{borderBottom:"1px solid #1d1d38"}}>
+                      <td style={{...TD,color:"#5050a0",width:36}}>{i+1}</td>
+                      <td style={{...TD,textAlign:"left",fontWeight:500}}>{s.name}</td>
+                      {CRITERIA.map(c=>(
+                        <td key={c} style={{...TD,width:86}}>
+                          <input type="number" min={0} max={10} step={0.1}
+                            value={row[c]??""}
+                            onChange={e=>setVal(s.id,c,e.target.value)}
+                            placeholder="–"
+                            style={{width:68,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,
+                              color:"#e8e8f0",padding:"5px 6px",fontSize:13,textAlign:"center",outline:"none"}}/>
+                        </td>
+                      ))}
+                      <td style={{...TD,fontWeight:800}}>
+                        {avg!==null
+                          ? <span style={{color:avg>=7?"#51cf66":avg>=6?"#ffd43b":"#ff6b6b",fontSize:15}}>
+                              {avg.toFixed(1)} <Badge value={avg}/>
+                            </span>
+                          : <span style={{color:"#3d3d60"}}>–</span>
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{marginTop:14}}>
+            <Btn onClick={saveAll}>💾 Guardar {subject} · Bimestre {bimestre}</Btn>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: PESOS                                                    */
+/* ══════════════════════════════════════════════════════════════ */
+function TabPesos({config, weights, onSave, showToast}) {
+  const [subject, setSubject] = useState(SUBJECTS[0]);
+  const [local,   setLocal]   = useState({});
+
+  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+
+  useEffect(()=>{
+    const init={};
+    bims.forEach(b=>{ init[b]={...(weights[`${subject}-${b}`]||DEF_W)}; });
+    setLocal(init);
+  },[subject,config.numBimestres,weights]);
+
+  const setW = (bim,crit,val) => setLocal(p=>({...p,[bim]:{...p[bim],[crit]:parseInt(val)||0}}));
+  const total = bim => CRITERIA.reduce((s,c)=>s+(local[bim]?.[c]||0),0);
+
+  const save = () => {
+    const next={...weights};
+    bims.forEach(b=>{ next[`${subject}-${b}`]=local[b]; });
+    onSave(next); showToast(`Valores de ${subject} guardados ✓`);
+  };
+
+  const copyB1 = () => {
+    const base=local[1]||DEF_W;
+    const next={};
+    bims.forEach(b=>{ next[b]={...base}; });
+    setLocal(next); showToast("Valores del Bim.1 copiados a todos ✓");
+  };
+
+  const reset = () => {
+    const next={};
+    bims.forEach(b=>{ next[b]={...DEF_W}; });
+    setLocal(next); showToast(`Valores de ${subject} restablecidos`);
+  };
+
+  const col = SUB_COLOR[subject];
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>⚖️ Valores de Evaluación</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Define el porcentaje de cada criterio por materia y bimestre. La suma debe ser exactamente 100%.</p>
+
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        {SUBJECTS.map(sub=>{
+          const c=SUB_COLOR[sub];
+          return (
+            <button key={sub} onClick={()=>setSubject(sub)} style={{
+              padding:"8px 18px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:14,
+              background:subject===sub?c.bg:"#1a1a2e",
+              border:subject===sub?`2px solid ${c.accent}`:"2px solid #2d2d4e",
+              color:subject===sub?c.accent:"#7070a0",
+            }}>{sub}</button>
+          );
+        })}
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+        <Btn onClick={copyB1} variant="secondary">📋 Copiar Bim.1 a todos</Btn>
+        <Btn onClick={reset} variant="secondary">🔄 Restablecer valores</Btn>
+        <Btn onClick={save}>💾 Guardar Valores de {subject}</Btn>
+      </div>
+
+      <div style={{display:"grid",gap:12,gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))"}}>
+        {bims.map(b=>{
+          const t=total(b);
+          const ok=t===100;
+          return (
+            <Card key={b} style={{border:`1px solid ${ok?col.accent+"44":"#ff6b6b44"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <span style={{fontWeight:700,color:col.accent}}>Bimestre {b}</span>
+                <span style={{fontSize:12,fontWeight:700,color:ok?"#51cf66":"#ff6b6b"}}>
+                  {ok?"✓ 100%":`⚠️ ${t}%`}
+                </span>
+              </div>
+              {CRITERIA.map((c,ci)=>{
+                const barColors=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
+                return (
+                  <div key={c} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <span style={{fontSize:12,width:88,color:"#c0c0e0",flexShrink:0}}>{C_ICONS[c]} {C_LABELS[c]}</span>
+                    <input type="range" min={0} max={100} value={local[b]?.[c]??0}
+                      onChange={e=>setW(b,c,e.target.value)}
+                      style={{flex:1,accentColor:col.accent}}/>
+                    <input type="number" min={0} max={100}
+                      value={local[b]?.[c]??0}
+                      onChange={e=>setW(b,c,e.target.value)}
+                      style={{width:48,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:5,
+                        color:col.accent,padding:"4px 5px",fontSize:13,textAlign:"center",fontWeight:700,outline:"none"}}/>
+                    <span style={{fontSize:11,color:"#5050a0"}}>%</span>
+                  </div>
+                );
+              })}
+              {/* Visual bar */}
+              <div style={{height:5,background:"#1a1a2e",borderRadius:3,overflow:"hidden",marginTop:8,display:"flex"}}>
+                {CRITERIA.map((c,ci)=>{
+                  const bc=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
+                  return <div key={c} style={{width:`${local[b]?.[c]??0}%`,background:bc[ci],transition:"width .2s"}}/>;
+                })}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: REPORTES                                                 */
+/* ══════════════════════════════════════════════════════════════ */
+function TabReportes({config, students, grades, weights}) {
+  const [subject,  setSubject]  = useState("all");
+  const [bimestre, setBimestre] = useState("all");
+  const [sortBy,   setSortBy]   = useState("name");
+
+  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+
+  const getAvg = (sid,sub,bim) => calcAvg(grades[`${sid}-${sub}-${bim}`], weights[`${sub}-${bim}`]||DEF_W);
+
+  const getFinal = sid => {
+    if (subject!=="all" && bimestre!=="all") return getAvg(sid,subject,parseInt(bimestre));
+    if (subject!=="all") {
+      const a=bims.map(b=>getAvg(sid,subject,b)).filter(v=>v!==null);
+      return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
+    }
+    if (bimestre!=="all") {
+      const a=SUBJECTS.map(s=>getAvg(sid,s,parseInt(bimestre))).filter(v=>v!==null);
+      return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
+    }
+    const a=SUBJECTS.flatMap(s=>bims.map(b=>getAvg(sid,s,b))).filter(v=>v!==null);
+    return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
+  };
+
+  let sorted=[...students];
+  if (sortBy==="asc") sorted.sort((a,b)=>(getFinal(a.id)??99)-(getFinal(b.id)??99));
+  else if (sortBy==="desc") sorted.sort((a,b)=>(getFinal(b.id)??-1)-(getFinal(a.id)??-1));
+  else sorted.sort((a,b)=>a.name.localeCompare(b.name));
+
+  const allA=sorted.map(s=>getFinal(s.id)).filter(v=>v!==null);
+  const groupAvg=allA.length? Math.round(allA.reduce((a,b)=>a+b,0)/allA.length*100)/100:null;
+
+  /* distribution */
+  const dist={MB:0,B:0,S:0,NS:0};
+  sorted.forEach(s=>{const v=getFinal(s.id);if(v!==null)dist[getGrade(v).label]++;});
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>📊 Reportes y Promedios</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Consulta promedios por alumno, materia y bimestre.</p>
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20,alignItems:"flex-end"}}>
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Materia</div>
+          <Sel value={subject} onChange={e=>setSubject(e.target.value)}>
+            <option value="all">Todas las materias</option>
+            {SUBJECTS.map(s=><option key={s} value={s}>{s}</option>)}
+          </Sel>
+        </div>
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Bimestre</div>
+          <Sel value={bimestre} onChange={e=>setBimestre(e.target.value)}>
+            <option value="all">Todos</option>
+            {bims.map(b=><option key={b} value={b}>Bimestre {b}</option>)}
+          </Sel>
+        </div>
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Ordenar</div>
+          <Sel value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+            <option value="name">Nombre A-Z</option>
+            <option value="desc">Mayor promedio</option>
+            <option value="asc">Menor promedio</option>
+          </Sel>
+        </div>
+        {groupAvg!==null && (
+          <Card style={{marginLeft:"auto",textAlign:"center",padding:"8px 20px",background:"#1a1a3e"}}>
+            <div style={{fontSize:11,color:"#7070a0"}}>Promedio del grupo</div>
+            <div style={{fontSize:22,fontWeight:800,color:groupAvg>=7?"#51cf66":"#ff6b6b"}}>{groupAvg.toFixed(1)}</div>
+          </Card>
+        )}
+      </div>
+
+      {/* Distribution */}
+      {students.length>0 && (
+        <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+          {[["MB","#51cf66"],["B","#4dabf7"],["S","#ffd43b"],["NS","#ff6b6b"]].map(([l,c])=>(
+            <Card key={l} style={{flex:1,minWidth:80,textAlign:"center",padding:"10px 8px",background:"#12122a",borderColor:c+"44"}}>
+              <div style={{fontSize:20,fontWeight:800,color:c}}>{dist[l]}</div>
+              <div style={{fontSize:11,color:c,fontWeight:700}}>{l}</div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {students.length===0 ? (
+        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>No hay alumnos registrados.</Card>
+      ) : (
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",minWidth:600}}>
+            <thead>
+              <tr style={{background:"#12122a"}}>
+                <th style={{...TH,textAlign:"left",width:36}}>#</th>
+                <th style={{...TH,textAlign:"left"}}>Alumno</th>
+                {subject==="all" ? (
+                  SUBJECTS.map(s=>(
+                    <th key={s} style={{...TH,color:SUB_COLOR[s].accent}}>{s}</th>
+                  ))
+                ) : bimestre==="all" ? (
+                  bims.map(b=><th key={b} style={TH}>Bim. {b}</th>)
+                ) : null}
+                <th style={{...TH,color:"#4361ee",fontSize:14}}>PROMEDIO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((s,i)=>{
+                const final=getFinal(s.id);
+                return (
+                  <tr key={s.id} style={{borderBottom:"1px solid #1d1d38",background:i%2===0?"#0d0d1a":"#0f0f22"}}>
+                    <td style={{...TD,color:"#5050a0"}}>{i+1}</td>
+                    <td style={{...TD,textAlign:"left",fontWeight:500}}>{s.name}</td>
+                    {subject==="all" ? (
+                      SUBJECTS.map(sub=>{
+                        const a = bimestre==="all"
+                          ? (()=>{const x=bims.map(b=>getAvg(s.id,sub,b)).filter(v=>v!==null);return x.length?Math.round(x.reduce((a,b)=>a+b,0)/x.length*100)/100:null;})()
+                          : getAvg(s.id,sub,parseInt(bimestre));
+                        return (
+                          <td key={sub} style={TD}>
+                            {a!==null
+                              ? <span style={{color:a>=7?"#51cf66":a>=6?"#ffd43b":"#ff6b6b",fontWeight:600}}>{a.toFixed(1)}</span>
+                              : <span style={{color:"#3d3d60"}}>–</span>}
+                          </td>
+                        );
+                      })
+                    ) : bimestre==="all" ? (
+                      bims.map(b=>{
+                        const a=getAvg(s.id,subject,b);
+                        return (
+                          <td key={b} style={TD}>
+                            {a!==null
+                              ? <span style={{color:a>=7?"#51cf66":a>=6?"#ffd43b":"#ff6b6b",fontWeight:600}}>{a.toFixed(1)}</span>
+                              : <span style={{color:"#3d3d60"}}>–</span>}
+                          </td>
+                        );
+                      })
+                    ) : null}
+                    <td style={{...TD,fontWeight:800,fontSize:15}}>
+                      {final!==null
+                        ? <span style={{color:final>=7?"#51cf66":final>=6?"#ffd43b":"#ff6b6b"}}>
+                            {final.toFixed(1)} <Badge value={final}/>
+                          </span>
+                        : <span style={{color:"#3d3d60"}}>–</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{display:"flex",gap:16,marginTop:16,flexWrap:"wrap"}}>
+        {[["MB","#51cf66","Muy Bien (9-10)"],["B","#4dabf7","Bien (7-8.9)"],["S","#ffd43b","Suficiente (6-6.9)"],["NS","#ff6b6b","No Suficiente (<6)"]].map(([l,c,d])=>(
+          <div key={l} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#7070a0"}}>
+            <span style={{background:c+"22",color:c,border:`1px solid ${c}44`,borderRadius:4,padding:"1px 6px",fontWeight:700}}>{l}</span>{d}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/*  TAB: SINCRONIZAR                                              */
+/* ══════════════════════════════════════════════════════════════ */
+function TabSync({config, onSaveConfig, onPush, onPull, syncing, showToast, students, grades, weights}) {
+  const [url, setUrl] = useState(config.gasUrl||"");
+
+  const saveUrl = () => {
+    onSaveConfig({...config, gasUrl:url.trim()});
+    showToast("URL de Apps Script guardada ✓");
+  };
+
+  const exportJSON = () => {
+    const data = JSON.stringify({config, students, grades, weights}, null, 2);
+    const blob = new Blob([data],{type:"application/json"});
+    const a = document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`calificaciones_${config.year}_${config.group}.json`;
+    a.click();
+    showToast("Respaldo JSON descargado ✓");
+  };
+
+  return (
+    <div>
+      <h2 style={{marginBottom:6,fontSize:18}}>☁️ Sincronización con Google Sheets</h2>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Conecta tu sistema con Google Sheets para tener respaldo en la nube y acceso desde cualquier dispositivo.</p>
+
+      <Card style={{marginBottom:20}}>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>🔗 URL del Web App (Apps Script)</div>
+        <p style={{fontSize:13,color:"#7070a0",marginBottom:12}}>
+          Sigue el README para crear el script. Pega aquí la URL que te da Google al desplegarlo.
+        </p>
+        <div style={{display:"flex",gap:10}}>
+          <Inp value={url} onChange={e=>setUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/AK.../exec"
+            style={{flex:1,fontFamily:"monospace",fontSize:12}}/>
+          <Btn onClick={saveUrl} disabled={!url.trim()}>Guardar URL</Btn>
+        </div>
+      </Card>
+
+      {config.gasUrl ? (
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20}}>
+          <Card style={{textAlign:"center",padding:24}}>
+            <div style={{fontSize:32,marginBottom:10}}>⬆️</div>
+            <div style={{fontWeight:700,marginBottom:6}}>Exportar a Google Sheets</div>
+            <div style={{fontSize:13,color:"#7070a0",marginBottom:14}}>Envía todos los datos locales a tu hoja de cálculo.</div>
+            <Btn onClick={onPush} disabled={syncing} variant="warning" style={{width:"100%"}}>
+              {syncing?"⏳ Exportando...":"⬆️ Exportar ahora"}
+            </Btn>
+          </Card>
+          <Card style={{textAlign:"center",padding:24}}>
+            <div style={{fontSize:32,marginBottom:10}}>⬇️</div>
+            <div style={{fontWeight:700,marginBottom:6}}>Importar desde Google Sheets</div>
+            <div style={{fontSize:13,color:"#7070a0",marginBottom:14}}>Descarga los datos guardados en tu hoja de cálculo.</div>
+            <Btn onClick={onPull} disabled={syncing} variant="secondary" style={{width:"100%"}}>
+              {syncing?"⏳ Importando...":"⬇️ Importar ahora"}
+            </Btn>
+          </Card>
+        </div>
+      ) : (
+        <Card style={{marginBottom:20,background:"#1a1a2e",borderColor:"#ffd43b44",textAlign:"center",padding:24}}>
+          <div style={{fontSize:24,marginBottom:8}}>⚠️</div>
+          <div style={{color:"#ffd43b",fontWeight:600}}>Configura la URL de Apps Script para habilitar la sincronización</div>
+        </Card>
+      )}
+
+      <Card>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>💾 Respaldo Local (JSON)</div>
+        <p style={{fontSize:13,color:"#7070a0",marginBottom:12}}>
+          Descarga un respaldo completo de todos tus datos en formato JSON. Úsalo como copia de seguridad.
+        </p>
+        <Btn onClick={exportJSON} variant="success">⬇️ Descargar Respaldo JSON</Btn>
+      </Card>
+
+      <Card style={{marginTop:14,background:"#12122a"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:8,color:"#c0c0e0"}}>📋 Estado del sistema</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+          {[
+            ["👥 Alumnos", students.length],
+            ["📊 Registros", Object.keys(grades).length],
+            ["⚖️ Valores config.", Object.keys(weights).length],
+          ].map(([label,val])=>(
+            <div key={label} style={{background:"#1a1a2e",borderRadius:8,padding:"10px 14px"}}>
+              <div style={{fontSize:11,color:"#7070a0"}}>{label}</div>
+              <div style={{fontSize:20,fontWeight:700,color:"#4361ee"}}>{val}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Mount ───────────────────────────────────────────────────── */
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
