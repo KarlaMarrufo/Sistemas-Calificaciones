@@ -2,18 +2,186 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sistema de Calificaciones</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Calificaciones</title>
+
+  <!-- ═══ PWA — Apariencia de App Nativa ═══ -->
+  <!-- Android / Chrome -->
+  <meta name="theme-color" content="#0d0d1a"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="application-name" content="Calificaciones"/>
+
+  <!-- iOS / Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Calificaciones"/>
+
+  <!-- Splash screen color iOS -->
+  <meta name="apple-touch-startup-image" content=""/>
+
+  <!-- Manifest dinámico (se inyecta via JS más abajo) -->
+  <link id="manifest-link" rel="manifest"/>
+
+  <!-- Icono para iOS (apple-touch-icon) — se genera via canvas -->
+  <link id="apple-touch-icon" rel="apple-touch-icon"/>
+
+  <!-- Favicon -->
+  <link id="favicon" rel="icon" type="image/png"/>
+
+  <script>
+  // ── Genera el ícono de la app con Canvas (sin archivos externos) ──
+  function makeIcon(size) {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+    const r = size * 0.18;
+
+    // Fondo degradado azul oscuro
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0, "#1a1a4e");
+    grad.addColorStop(1, "#0d0d2e");
+    ctx.fillStyle = grad;
+    // Rounded rect
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
+    ctx.quadraticCurveTo(size, 0, size, r);
+    ctx.lineTo(size, size-r);
+    ctx.quadraticCurveTo(size, size, size-r, size);
+    ctx.lineTo(r, size);
+    ctx.quadraticCurveTo(0, size, 0, size-r);
+    ctx.lineTo(0, r);
+    ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Brillo superior
+    const shine = ctx.createLinearGradient(0, 0, 0, size*0.5);
+    shine.addColorStop(0, "rgba(255,255,255,0.10)");
+    shine.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = shine;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
+    ctx.quadraticCurveTo(size, 0, size, r);
+    ctx.lineTo(size, size*0.5);
+    ctx.lineTo(0, size*0.5);
+    ctx.lineTo(0, r);
+    ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Círculo acento azul
+    ctx.beginPath();
+    ctx.arc(size/2, size*0.42, size*0.30, 0, Math.PI*2);
+    ctx.fillStyle = "#4361ee22";
+    ctx.fill();
+    ctx.strokeStyle = "#4361ee66";
+    ctx.lineWidth = size * 0.025;
+    ctx.stroke();
+
+    // Emoji 🏫 centrado
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${size * 0.40}px serif`;
+    ctx.fillText("🏫", size/2, size * 0.42);
+
+    // Texto "CAL" abajo
+    ctx.font = `bold ${size * 0.13}px 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "#a0a8ff";
+    ctx.letterSpacing = size * 0.01 + "px";
+    ctx.fillText("CALIFICACIONES", size/2, size * 0.80);
+
+    // Línea decorativa
+    ctx.strokeStyle = "#4361ee88";
+    ctx.lineWidth = size * 0.012;
+    ctx.beginPath();
+    ctx.moveTo(size*0.20, size*0.70);
+    ctx.lineTo(size*0.80, size*0.70);
+    ctx.stroke();
+
+    return c.toDataURL("image/png");
+  }
+
+  // Inyectar iconos y manifest cuando el DOM esté listo
+  window.addEventListener("DOMContentLoaded", () => {
+    try {
+      const icon192 = makeIcon(192);
+      const icon512 = makeIcon(512);
+      const icon180 = makeIcon(180);
+
+      // apple-touch-icon (iOS)
+      document.getElementById("apple-touch-icon").href = icon180;
+      // favicon
+      document.getElementById("favicon").href = icon192;
+
+      // Web App Manifest
+      const manifest = {
+        name: "Sistema de Calificaciones",
+        short_name: "Calificaciones",
+        description: "Sistema de gestión de calificaciones escolares",
+        start_url: "./",
+        display: "standalone",
+        orientation: "portrait-primary",
+        background_color: "#0d0d1a",
+        theme_color: "#0d0d1a",
+        lang: "es",
+        icons: [
+          { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type:"application/json"});
+      document.getElementById("manifest-link").href = URL.createObjectURL(blob);
+    } catch(e) { console.warn("PWA setup:", e); }
+  });
+
+  // ── Service Worker (cache offline) ──
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      const swCode = `
+        const CACHE = "calificaciones-v2";
+        const URLS  = [self.registration.scope];
+        self.addEventListener("install",  e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))); self.skipWaiting(); });
+        self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); self.clients.claim(); });
+        self.addEventListener("fetch", e => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const swBlob = new Blob([swCode], {type:"text/javascript"});
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob))
+        .catch(()=>{});
+    });
+  }
+  </script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0d0d1a; color: #e8e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    html { height: 100%; }
+    body {
+      background: #0d0d1a; color: #e8e8f0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100%; min-height: 100vh;
+      /* Evita rebote en iOS */
+      overscroll-behavior: none;
+      /* Respeta el notch / barra de estado */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    /* Evita zoom al tocar inputs en iOS */
+    input, select, textarea { font-size: 16px !important; }
+    input[type=number] { font-size: 14px !important; }
     input[type=number]::-webkit-inner-spin-button { opacity: 1; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    /* Quita el highlight azul al tocar en móvil */
+    * { -webkit-tap-highlight-color: transparent; }
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: #1a1a2e; }
     ::-webkit-scrollbar-thumb { background: #3d3d60; border-radius: 3px; }
+    /* Animaciones */
     @keyframes fadeIn  { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
     @keyframes fadeUp  { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
     @keyframes pulse   { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.04)} }
@@ -24,6 +192,33 @@
     table { border-collapse: collapse; }
     .login-wrap { animation: fadeUp .5s ease both; }
     .shake-anim { animation: shake .4s ease; }
+    /* Tab bar sticky bottom en móvil */
+    @media (max-width: 600px) {
+      .tab-bar {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0; right: 0;
+        z-index: 50;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid #2d2d4e !important;
+        border-bottom: none !important;
+        background: #0f0f22 !important;
+        box-shadow: 0 -4px 20px #00000060;
+        justify-content: space-around !important;
+        overflow-x: visible !important;
+      }
+      .tab-bar button {
+        flex: 1;
+        flex-direction: column !important;
+        padding: 8px 4px !important;
+        font-size: 10px !important;
+        gap: 3px;
+      }
+      .tab-bar button .tab-emoji { display: block; font-size: 18px; }
+      .tab-bar button .tab-text  { display: block; font-size: 10px; }
+      .main-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+      .app-header   { padding: 10px 14px !important; }
+    }
   </style>
 </head>
 <body>
@@ -352,6 +547,7 @@ function App() {
   const [students, setStudents] = useState(() => LS.get("stu") || []);
   const [weights,  setWeights]  = useState(() => LS.get("wts") || {});
   const [grades,   setGrades]   = useState(() => LS.get("grd") || {});
+  const [totals,   setTotals]   = useState(() => LS.get("tot") || {});  // max aciertos por criterio
 
   const isAdmin   = session?.role === "masteradmin";
   const TABS      = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
@@ -370,6 +566,7 @@ function App() {
   const saveStudents = s => { setStudents(s); LS.set("stu",s); };
   const saveWeights  = w => { setWeights(w);  LS.set("wts",w); };
   const saveGrades   = g => { setGrades(g);   LS.set("grd",g); };
+  const saveTotals   = t => { setTotals(t);   LS.set("tot",t); };
 
   const logout = () => {
     LS.set("session", null);
@@ -410,11 +607,11 @@ function App() {
   return (
     <div style={{minHeight:"100vh"}}>
       {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+      <div className="app-header" style={{background:"linear-gradient(135deg,#1a1a3e 0%,#0f0f2d 100%)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
         <span style={{fontSize:26}}>🏫</span>
         <div>
           <div style={{fontSize:16,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
-          <div style={{fontSize:11,color:"#7070a0"}}>{config.year} · {config.grade} Grado · Grupo {config.group} · {config.numBimestres} Bimestres</div>
+          <div style={{fontSize:11,color:"#7070a0"}}>{config.year} · {config.grade} · Grupo {config.group}</div>
         </div>
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           {isAdmin && config.gasUrl && (
@@ -434,29 +631,38 @@ function App() {
           <button onClick={logout} title="Cerrar sesión"
             style={{background:"#ff6b6b15",border:"1px solid #ff6b6b33",borderRadius:8,color:"#ff6b6b",
               padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:600}}>
-            🚪 Salir
+            🚪
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{display:"flex",background:"#12122a",borderBottom:"1px solid #2d2d4e",overflowX:"auto"}}>
-        {TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            padding:"12px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
-            background:"none",border:"none",
-            borderBottom:tab===t.id?"2px solid #4361ee":"2px solid transparent",
-            color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"
-          }}>{t.label}</button>
-        ))}
+      <div className="tab-bar" style={{display:"flex",background:"#12122a",borderBottom:"1px solid #2d2d4e",overflowX:"auto"}}>
+        {TABS.map(t=>{
+          // Split emoji and text for mobile column layout
+          const match = t.label.match(/^(\S+)\s(.+)$/);
+          const emoji = match?.[1] || t.label;
+          const text  = match?.[2] || "";
+          return (
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{
+              padding:"12px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
+              background:"none",border:"none",display:"flex",alignItems:"center",gap:4,
+              borderBottom:tab===t.id?"2px solid #4361ee":"2px solid transparent",
+              color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"
+            }}>
+              <span className="tab-emoji">{emoji}</span>
+              <span className="tab-text">{text}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}
-      <div style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
+      <div className="main-content" style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
         {tab==="config"   && <TabConfig   config={config} onSave={saveConfig} showToast={showToast}/>}
         {tab==="alumnos"  && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
-        {tab==="califs"   && <TabCalifs   config={config} students={students} grades={grades} weights={weights} onSave={saveGrades} showToast={showToast}/>}
-        {tab==="pesos"    && <TabPesos    config={config} weights={weights} onSave={saveWeights} showToast={showToast}/>}
+        {tab==="califs"   && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} onSave={saveGrades} showToast={showToast}/>}
+        {tab==="pesos"    && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
         {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights}/>}
         {tab==="sync"     && <TabSync     config={config} onSaveConfig={saveConfig} onPush={syncPush} onPull={syncPull} syncing={syncing} showToast={showToast} students={students} grades={grades} weights={weights}/>}
         {tab==="usuarios" && isAdmin && <TabUsuarios showToast={showToast}/>}
@@ -633,14 +839,41 @@ function TabAlumnos({students, onSave, showToast}) {
 /* ══════════════════════════════════════════════════════════════ */
 /*  TAB: CALIFICACIONES                                           */
 /* ══════════════════════════════════════════════════════════════ */
-function TabCalifs({config, students, grades, weights, onSave, showToast}) {
+function TabCalifs({config, students, grades, weights, totals, onSave, showToast}) {
   const [subject,  setSubject]  = useState(SUBJECTS[0]);
   const [bimestre, setBimestre] = useState(1);
-  const [local,    setLocal]    = useState({});
+  const [local,    setLocal]    = useState({});   // raw input per student/criterion
+  const [mode,     setMode]     = useState("aciertos"); // "aciertos" | "directo"
 
   const col  = SUB_COLOR[subject];
   const wKey = `${subject}-${bimestre}`;
   const w    = weights[wKey] || DEF_W;
+
+  // Get configured max for a criterion (default 10 = direct 0-10 scale)
+  const getMax = (crit) => {
+    const t = totals[`${subject}-${bimestre}-${crit}`];
+    return (t && t > 0) ? t : null; // null = not configured
+  };
+
+  // Convert raw input to 0-10 grade
+  const toGrade = (val, crit) => {
+    const max = getMax(crit);
+    const n = parseFloat(val);
+    if (isNaN(n)) return null;
+    if (mode === "aciertos" && max) return Math.round((n / max) * 10 * 100) / 100;
+    return n; // direct mode
+  };
+
+  // For calcAvg, convert stored raw values to grades first
+  const getConvertedRow = (sid) => {
+    const row = local[sid] || {};
+    const converted = {};
+    CRITERIA.forEach(c => {
+      const g = toGrade(row[c], c);
+      if (g !== null) converted[c] = Math.min(10, g); // cap at 10
+    });
+    return converted;
+  };
 
   useEffect(()=>{
     const init = {};
@@ -654,17 +887,21 @@ function TabCalifs({config, students, grades, weights, onSave, showToast}) {
 
   const saveAll = () => {
     const next = {...grades};
-    students.forEach(s=>{ next[`${s.id}-${subject}-${bimestre}`] = local[s.id]||{}; });
+    students.forEach(s=>{
+      // Store the converted (0-10) grade, not the raw aciertos
+      next[`${s.id}-${subject}-${bimestre}`] = getConvertedRow(s.id);
+    });
     onSave(next);
     showToast(`${subject} · Bimestre ${bimestre} guardado ✓`);
   };
 
   const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+  const anyMaxConfigured = CRITERIA.some(c => getMax(c));
 
   return (
     <div>
       <h2 style={{marginBottom:6,fontSize:18}}>✏️ Captura de Calificaciones</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Cada materia y bimestre se guardan de forma independiente.</p>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Cada materia y bimestre se guardan de forma independiente.</p>
 
       {/* Selectors */}
       <div style={{display:"flex",flexWrap:"wrap",gap:16,marginBottom:16}}>
@@ -697,20 +934,52 @@ function TabCalifs({config, students, grades, weights, onSave, showToast}) {
             ))}
           </div>
         </div>
+
+        {/* Mode toggle */}
+        <div>
+          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Modo de captura</div>
+          <div style={{display:"flex",gap:0,borderRadius:8,overflow:"hidden",border:"1px solid #2d2d4e"}}>
+            {[["aciertos","🎯 Aciertos"],["directo","✏️ Calificación"]].map(([m,label])=>(
+              <button key={m} onClick={()=>setMode(m)} style={{
+                padding:"7px 14px",fontSize:12,fontWeight:600,cursor:"pointer",border:"none",
+                background:mode===m?"#4361ee":"#1a1a2e",color:mode===m?"#fff":"#7070a0",transition:"all .15s"
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Weights preview */}
+      {/* Info panel — totals configured */}
       <Card style={{marginBottom:16,background:col.bg,borderColor:col.accent+"44"}}>
         <div style={{fontSize:12,color:col.accent,marginBottom:8,fontWeight:700}}>
-          ⚖️ Valores activos — {subject} · Bimestre {bimestre}
+          {mode==="aciertos"?"🎯":"✏️"} {mode==="aciertos"?"Modo Aciertos":"Modo Calificación Directa"} — {subject} · Bimestre {bimestre}
         </div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-          {CRITERIA.map(c=>(
-            <span key={c} style={{fontSize:12,color:col.light}}>
-              {C_ICONS[c]} {C_LABELS[c]}: <strong style={{color:col.accent}}>{w[c]}%</strong>
-            </span>
-          ))}
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          {CRITERIA.map(c=>{
+            const max = getMax(c);
+            return (
+              <div key={c} style={{background:"#00000030",borderRadius:6,padding:"6px 10px",minWidth:100}}>
+                <div style={{fontSize:11,color:col.light,marginBottom:2}}>{C_ICONS[c]} {C_LABELS[c]}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                  <span style={{fontSize:14,fontWeight:700,color:col.accent}}>{w[c]}%</span>
+                  {mode==="aciertos" && (
+                    <span style={{fontSize:11,color:max?"#51cf66":"#ffd43b"}}>
+                      {max ? `· /${max} aciertos` : "· sin máx. configurado"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
+        {mode==="aciertos" && !anyMaxConfigured && (
+          <div style={{marginTop:10,padding:"6px 10px",background:"#ffd43b15",border:"1px solid #ffd43b44",borderRadius:6,fontSize:12,color:"#ffd43b"}}>
+            ⚠️ Configura los máximos de aciertos en la pestaña ⚖️ Valores para usar el modo automático.
+          </div>
+        )}
+        {mode==="directo" && (
+          <div style={{marginTop:8,fontSize:11,color:col.light}}>Captura directamente la calificación de 0 a 10.</div>
+        )}
       </Card>
 
       {students.length===0 ? (
@@ -720,39 +989,64 @@ function TabCalifs({config, students, grades, weights, onSave, showToast}) {
       ) : (
         <>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",minWidth:580}}>
+            <table style={{width:"100%",minWidth:520}}>
               <thead>
                 <tr style={{background:"#12122a"}}>
                   <th style={TH}>#</th>
                   <th style={{...TH,textAlign:"left"}}>Alumno</th>
-                  {CRITERIA.map(c=>(
-                    <th key={c} style={TH}>
-                      {C_ICONS[c]} {C_LABELS[c]}<br/>
-                      <span style={{color:"#5050a0",fontWeight:400,fontSize:11}}>{w[c]}%</span>
-                    </th>
-                  ))}
+                  {CRITERIA.map(c=>{
+                    const max = getMax(c);
+                    return (
+                      <th key={c} style={TH}>
+                        {C_ICONS[c]} {C_LABELS[c]}<br/>
+                        <span style={{color:"#5050a0",fontWeight:400,fontSize:11}}>
+                          {w[c]}%{mode==="aciertos"&&max ? ` · /${max}` : ""}
+                        </span>
+                      </th>
+                    );
+                  })}
                   <th style={{...TH,color:col.accent}}>Promedio</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((s,i)=>{
-                  const row = local[s.id]||{};
-                  const avg = calcAvg(row,w);
+                  const row       = local[s.id]||{};
+                  const converted = getConvertedRow(s.id);
+                  const avg       = calcAvg(converted, w);
                   return (
                     <tr key={s.id} style={{borderBottom:"1px solid #1d1d38"}}>
-                      <td style={{...TD,color:"#5050a0",width:36}}>{i+1}</td>
-                      <td style={{...TD,textAlign:"left",fontWeight:500}}>{s.name}</td>
-                      {CRITERIA.map(c=>(
-                        <td key={c} style={{...TD,width:86}}>
-                          <input type="number" min={0} max={10} step={0.1}
-                            value={row[c]??""}
-                            onChange={e=>setVal(s.id,c,e.target.value)}
-                            placeholder="–"
-                            style={{width:68,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,
-                              color:"#e8e8f0",padding:"5px 6px",fontSize:13,textAlign:"center",outline:"none"}}/>
-                        </td>
-                      ))}
-                      <td style={{...TD,fontWeight:800}}>
+                      <td style={{...TD,color:"#5050a0",width:32}}>{i+1}</td>
+                      <td style={{...TD,textAlign:"left",fontWeight:500,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</td>
+                      {CRITERIA.map(c=>{
+                        const max   = getMax(c);
+                        const raw   = row[c] ?? "";
+                        const grade = toGrade(raw, c);
+                        const capped = grade !== null ? Math.min(10, grade) : null;
+                        const useAciertos = mode==="aciertos" && max;
+                        return (
+                          <td key={c} style={{...TD,padding:"6px 4px"}}>
+                            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                              <div style={{display:"flex",alignItems:"center",gap:3}}>
+                                <input type="number"
+                                  min={0} max={useAciertos ? max : 10} step={useAciertos ? 1 : 0.1}
+                                  value={raw}
+                                  onChange={e=>setVal(s.id,c,e.target.value)}
+                                  placeholder="–"
+                                  style={{width:useAciertos?54:60,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,
+                                    color:"#e8e8f0",padding:"5px 4px",fontSize:13,textAlign:"center",outline:"none"}}/>
+                                {useAciertos && <span style={{fontSize:11,color:"#5050a0"}}>/{max}</span>}
+                              </div>
+                              {/* Show converted grade when in aciertos mode */}
+                              {useAciertos && capped !== null && (
+                                <div style={{fontSize:11,color:capped>=7?"#51cf66":capped>=6?"#ffd43b":"#ff6b6b",fontWeight:700}}>
+                                  = {capped.toFixed(1)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td style={{...TD,fontWeight:800,minWidth:70}}>
                         {avg!==null
                           ? <span style={{color:avg>=7?"#51cf66":avg>=6?"#ffd43b":"#ff6b6b",fontSize:15}}>
                               {avg.toFixed(1)} <Badge value={avg}/>
@@ -766,8 +1060,28 @@ function TabCalifs({config, students, grades, weights, onSave, showToast}) {
               </tbody>
             </table>
           </div>
-          <div style={{marginTop:14}}>
+
+          {/* Formula explainer */}
+          {mode==="aciertos" && anyMaxConfigured && (
+            <Card style={{marginTop:14,background:"#12122a",borderColor:"#4361ee33"}}>
+              <div style={{fontSize:12,color:"#8080b0",marginBottom:6,fontWeight:600}}>📐 Fórmula aplicada</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+                {CRITERIA.filter(c=>getMax(c)).map(c=>{
+                  const max=getMax(c);
+                  return (
+                    <div key={c} style={{fontSize:12,color:"#a0a0c0"}}>
+                      <span style={{color:col.accent}}>{C_LABELS[c]}:</span>{" "}
+                      (aciertos ÷ {max}) × 10 × {w[c]}% del promedio
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          <div style={{marginTop:14,display:"flex",gap:10,alignItems:"center"}}>
             <Btn onClick={saveAll}>💾 Guardar {subject} · Bimestre {bimestre}</Btn>
+            <span style={{fontSize:12,color:"#5050a0"}}>Se guarda la calificación convertida (0-10)</span>
           </div>
         </>
       )}
@@ -776,40 +1090,71 @@ function TabCalifs({config, students, grades, weights, onSave, showToast}) {
 }
 
 /* ══════════════════════════════════════════════════════════════ */
-/*  TAB: PESOS                                                    */
+/*  TAB: VALORES / PESOS                                          */
 /* ══════════════════════════════════════════════════════════════ */
-function TabPesos({config, weights, onSave, showToast}) {
-  const [subject, setSubject] = useState(SUBJECTS[0]);
-  const [local,   setLocal]   = useState({});
+function TabPesos({config, weights, totals, onSave, onSaveTotals, showToast}) {
+  const [subject,   setSubject]   = useState(SUBJECTS[0]);
+  const [localW,    setLocalW]    = useState({});
+  const [localT,    setLocalT]    = useState({});  // max aciertos
+  const [activeTab, setActiveTab] = useState("pesos"); // "pesos" | "aciertos"
 
   const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
 
+  // Load weights
   useEffect(()=>{
     const init={};
     bims.forEach(b=>{ init[b]={...(weights[`${subject}-${b}`]||DEF_W)}; });
-    setLocal(init);
+    setLocalW(init);
   },[subject,config.numBimestres,weights]);
 
-  const setW = (bim,crit,val) => setLocal(p=>({...p,[bim]:{...p[bim],[crit]:parseInt(val)||0}}));
-  const total = bim => CRITERIA.reduce((s,c)=>s+(local[bim]?.[c]||0),0);
+  // Load totals
+  useEffect(()=>{
+    const init={};
+    CRITERIA.forEach(c=>{
+      init[c]={};
+      bims.forEach(b=>{ init[c][b] = totals[`${subject}-${b}-${c}`] || ""; });
+    });
+    setLocalT(init);
+  },[subject,config.numBimestres,totals]);
 
-  const save = () => {
+  const setW = (bim,crit,val) => setLocalW(p=>({...p,[bim]:{...p[bim],[crit]:parseInt(val)||0}}));
+  const setT = (crit,bim,val) => setLocalT(p=>({...p,[crit]:{...p[crit],[bim]:val}}));
+  const total = bim => CRITERIA.reduce((s,c)=>s+(localW[bim]?.[c]||0),0);
+
+  const savePesos = () => {
     const next={...weights};
-    bims.forEach(b=>{ next[`${subject}-${b}`]=local[b]; });
+    bims.forEach(b=>{ next[`${subject}-${b}`]=localW[b]; });
     onSave(next); showToast(`Valores de ${subject} guardados ✓`);
   };
 
-  const copyB1 = () => {
-    const base=local[1]||DEF_W;
-    const next={};
-    bims.forEach(b=>{ next[b]={...base}; });
-    setLocal(next); showToast("Valores del Bim.1 copiados a todos ✓");
+  const saveTotals = () => {
+    const next={...totals};
+    CRITERIA.forEach(c=>{
+      bims.forEach(b=>{
+        const v = parseInt(localT[c]?.[b]);
+        const key = `${subject}-${b}-${c}`;
+        if (v > 0) next[key] = v;
+        else delete next[key];
+      });
+    });
+    onSaveTotals(next); showToast(`Máximos de ${subject} guardados ✓`);
   };
 
-  const reset = () => {
+  const copyB1Pesos = () => {
+    const base=localW[1]||DEF_W;
     const next={};
-    bims.forEach(b=>{ next[b]={...DEF_W}; });
-    setLocal(next); showToast(`Valores de ${subject} restablecidos`);
+    bims.forEach(b=>{ next[b]={...base}; });
+    setLocalW(next); showToast("Valores del Bim.1 copiados a todos ✓");
+  };
+
+  const copyB1Totals = () => {
+    const next={};
+    CRITERIA.forEach(c=>{
+      next[c]={};
+      const base = localT[c]?.[1] || "";
+      bims.forEach(b=>{ next[c][b]=base; });
+    });
+    setLocalT(next); showToast("Máximos del Bim.1 copiados a todos ✓");
   };
 
   const col = SUB_COLOR[subject];
@@ -817,8 +1162,9 @@ function TabPesos({config, weights, onSave, showToast}) {
   return (
     <div>
       <h2 style={{marginBottom:6,fontSize:18}}>⚖️ Valores de Evaluación</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Define el porcentaje de cada criterio por materia y bimestre. La suma debe ser exactamente 100%.</p>
+      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Configura los porcentajes y los máximos de aciertos por materia y bimestre.</p>
 
+      {/* Subject selector */}
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
         {SUBJECTS.map(sub=>{
           const c=SUB_COLOR[sub];
@@ -833,52 +1179,134 @@ function TabPesos({config, weights, onSave, showToast}) {
         })}
       </div>
 
-      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-        <Btn onClick={copyB1} variant="secondary">📋 Copiar Bim.1 a todos</Btn>
-        <Btn onClick={reset} variant="secondary">🔄 Restablecer valores</Btn>
-        <Btn onClick={save}>💾 Guardar Valores de {subject}</Btn>
+      {/* Sub-tabs */}
+      <div style={{display:"flex",gap:0,marginBottom:20,borderRadius:8,overflow:"hidden",border:"1px solid #2d2d4e",width:"fit-content"}}>
+        {[["pesos","⚖️ Porcentajes"],["aciertos","🎯 Máximos de Aciertos"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setActiveTab(id)} style={{
+            padding:"9px 18px",fontSize:13,fontWeight:600,cursor:"pointer",border:"none",
+            background:activeTab===id?"#4361ee":"#1a1a2e",
+            color:activeTab===id?"#fff":"#7070a0",transition:"all .15s"
+          }}>{label}</button>
+        ))}
       </div>
 
-      <div style={{display:"grid",gap:12,gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))"}}>
-        {bims.map(b=>{
-          const t=total(b);
-          const ok=t===100;
-          return (
-            <Card key={b} style={{border:`1px solid ${ok?col.accent+"44":"#ff6b6b44"}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <span style={{fontWeight:700,color:col.accent}}>Bimestre {b}</span>
-                <span style={{fontSize:12,fontWeight:700,color:ok?"#51cf66":"#ff6b6b"}}>
-                  {ok?"✓ 100%":`⚠️ ${t}%`}
-                </span>
-              </div>
-              {CRITERIA.map((c,ci)=>{
-                const barColors=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
+      {/* ── PORCENTAJES ── */}
+      {activeTab==="pesos" && (
+        <>
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+            <Btn onClick={copyB1Pesos} variant="secondary">📋 Copiar Bim.1 a todos</Btn>
+            <Btn onClick={()=>{ const n={}; bims.forEach(b=>{n[b]={...DEF_W};}); setLocalW(n); showToast("Valores restablecidos"); }} variant="secondary">🔄 Restablecer</Btn>
+            <Btn onClick={savePesos}>💾 Guardar Porcentajes de {subject}</Btn>
+          </div>
+          <div style={{display:"grid",gap:12,gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))"}}>
+            {bims.map(b=>{
+              const t=total(b); const ok=t===100;
+              return (
+                <Card key={b} style={{border:`1px solid ${ok?col.accent+"44":"#ff6b6b44"}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <span style={{fontWeight:700,color:col.accent}}>Bimestre {b}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:ok?"#51cf66":"#ff6b6b"}}>{ok?"✓ 100%":`⚠️ ${t}%`}</span>
+                  </div>
+                  {CRITERIA.map(c=>(
+                    <div key={c} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <span style={{fontSize:12,width:88,color:"#c0c0e0",flexShrink:0}}>{C_ICONS[c]} {C_LABELS[c]}</span>
+                      <input type="range" min={0} max={100} value={localW[b]?.[c]??0}
+                        onChange={e=>setW(b,c,e.target.value)} style={{flex:1,accentColor:col.accent}}/>
+                      <input type="number" min={0} max={100} value={localW[b]?.[c]??0}
+                        onChange={e=>setW(b,c,e.target.value)}
+                        style={{width:48,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:5,
+                          color:col.accent,padding:"4px 5px",fontSize:13,textAlign:"center",fontWeight:700,outline:"none"}}/>
+                      <span style={{fontSize:11,color:"#5050a0"}}>%</span>
+                    </div>
+                  ))}
+                  <div style={{height:5,background:"#1a1a2e",borderRadius:3,overflow:"hidden",marginTop:8,display:"flex"}}>
+                    {CRITERIA.map((c,ci)=>{
+                      const bc=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
+                      return <div key={c} style={{width:`${localW[b]?.[c]??0}%`,background:bc[ci],transition:"width .2s"}}/>;
+                    })}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ── MÁXIMOS DE ACIERTOS ── */}
+      {activeTab==="aciertos" && (
+        <>
+          <Card style={{marginBottom:16,background:"#1a1a3e",borderColor:"#4361ee44"}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#c0c0e0",marginBottom:6}}>💡 ¿Cómo funciona?</div>
+            <p style={{fontSize:13,color:"#8080b0",lineHeight:1.6}}>
+              Define el total de aciertos posibles para cada criterio. Ejemplo: si el examen tiene <strong style={{color:"#4dabf7"}}>40 reactivos</strong>, pon 40 en Examen.
+              Al capturar calificaciones en modo 🎯 Aciertos, el sistema convierte automáticamente: <strong style={{color:"#51cf66"}}>(aciertos ÷ máximo) × 10</strong>.
+              Deja vacío para capturar directamente en escala 0-10.
+            </p>
+          </Card>
+
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+            <Btn onClick={copyB1Totals} variant="secondary">📋 Copiar Bim.1 a todos</Btn>
+            <Btn onClick={saveTotals}>💾 Guardar Máximos de {subject}</Btn>
+          </div>
+
+          {/* Grid: criterios como filas, bimestres como columnas */}
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",minWidth:400}}>
+              <thead>
+                <tr style={{background:"#12122a"}}>
+                  <th style={{...TH,textAlign:"left",width:120}}>Criterio</th>
+                  {bims.map(b=><th key={b} style={TH}>Bimestre {b}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {CRITERIA.map(c=>(
+                  <tr key={c} style={{borderBottom:"1px solid #1d1d38"}}>
+                    <td style={{...TD,textAlign:"left",fontWeight:600,color:col.accent,paddingLeft:8}}>
+                      {C_ICONS[c]} {C_LABELS[c]}
+                    </td>
+                    {bims.map(b=>(
+                      <td key={b} style={TD}>
+                        <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                          <input type="number" min={1} max={9999} step={1}
+                            value={localT[c]?.[b]??""} placeholder="–"
+                            onChange={e=>setT(c,b,e.target.value)}
+                            style={{width:70,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,
+                              color:"#e8e8f0",padding:"6px 8px",fontSize:13,textAlign:"center",outline:"none"}}/>
+                          {localT[c]?.[b] && <span style={{fontSize:11,color:"#5050a0"}}>pts</span>}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Example */}
+          <Card style={{marginTop:16,background:"#12122a"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#c0c0e0",marginBottom:8}}>📐 Ejemplo de conversión</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:16}}>
+              {CRITERIA.map(c=>{
+                const maxVal = parseInt(localT[c]?.[1]);
+                if (!maxVal) return null;
+                const ejemploAciertos = Math.round(maxVal * 0.8);
+                const resultado = ((ejemploAciertos / maxVal) * 10).toFixed(1);
                 return (
-                  <div key={c} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                    <span style={{fontSize:12,width:88,color:"#c0c0e0",flexShrink:0}}>{C_ICONS[c]} {C_LABELS[c]}</span>
-                    <input type="range" min={0} max={100} value={local[b]?.[c]??0}
-                      onChange={e=>setW(b,c,e.target.value)}
-                      style={{flex:1,accentColor:col.accent}}/>
-                    <input type="number" min={0} max={100}
-                      value={local[b]?.[c]??0}
-                      onChange={e=>setW(b,c,e.target.value)}
-                      style={{width:48,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:5,
-                        color:col.accent,padding:"4px 5px",fontSize:13,textAlign:"center",fontWeight:700,outline:"none"}}/>
-                    <span style={{fontSize:11,color:"#5050a0"}}>%</span>
+                  <div key={c} style={{background:"#1a1a2e",borderRadius:8,padding:"8px 12px",fontSize:12}}>
+                    <div style={{color:col.accent,fontWeight:600,marginBottom:4}}>{C_LABELS[c]} · Bim.1</div>
+                    <div style={{color:"#8080b0"}}>
+                      {ejemploAciertos}/{maxVal} aciertos = <strong style={{color:"#51cf66"}}>{resultado}</strong>
+                    </div>
                   </div>
                 );
               })}
-              {/* Visual bar */}
-              <div style={{height:5,background:"#1a1a2e",borderRadius:3,overflow:"hidden",marginTop:8,display:"flex"}}>
-                {CRITERIA.map((c,ci)=>{
-                  const bc=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
-                  return <div key={c} style={{width:`${local[b]?.[c]??0}%`,background:bc[ci],transition:"width .2s"}}/>;
-                })}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              {!CRITERIA.some(c=>parseInt(localT[c]?.[1]))&&(
+                <div style={{color:"#5050a0",fontSize:12}}>Configura los máximos arriba para ver ejemplos.</div>
+              )}
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
