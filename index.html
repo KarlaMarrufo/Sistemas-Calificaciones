@@ -666,13 +666,20 @@ function App() {
      - Responde con ContentService JSON → CORS automático de Google
   ─────────────────────────────────────────────────────────────── */
 
-  // Función base igual al hotel — POST text/plain, lee respuesta JSON
+  // Función base — GET con ?action=X&data=JSON
+  // GET nunca tiene restricción CORS, funciona en todos los navegadores e iOS
   const gasCall = async (data) => {
-    const res = await fetch(gasUrl, {
-      method:  "POST",
-      headers: { "Content-Type": "text/plain" },
-      body:    JSON.stringify(data),
+    const action = data.action;
+    // Separamos action de los demás datos
+    const { action: _, ...rest } = data;
+    const params = new URLSearchParams({ action });
+    // Cada campo va como parámetro separado para no superar límite de URL
+    // EXCEPTO logo que va omitido en llamadas automáticas
+    Object.keys(rest).forEach(k => {
+      const v = rest[k];
+      if (v !== undefined) params.set(k, typeof v === "string" ? v : JSON.stringify(v));
     });
+    const res = await fetch(`${gasUrl}?${params.toString()}`);
     if (!res.ok) throw new Error("HTTP " + res.status);
     return res.json();
   };
