@@ -659,40 +659,60 @@ function App() {
     stateRef.current = { config, students, weights, grades, totals, rawGrades, schoolLogo };
   }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
 
-  /* ─── GAS API ──────────────────────────────────────────────── */
+  /* ─── GAS API ─────────────────────────────────────────────────
+     PUSH: no-cors (GAS acepta el dato, no podemos leer respuesta
+           pero se guarda — marcamos ok optimistamente)
+     PULL: JSONP inyectando <script> tag — evita CORS por completo
+  ──────────────────────────────────────────────────────────── */
   const gasPush = async (silent=false) => {
     if (!gasUrl || pushing.current) return;
     pushing.current = true;
     setSyncStatus("syncing");
     try {
       const { config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
-      // Content-Type: text/plain evita el preflight CORS con Google Apps Script
-      const res = await fetch(gasUrl, {
+      // no-cors: el navegador no puede leer la respuesta pero GAS recibe y guarda los datos
+      await fetch(gasUrl, {
         method:  "POST",
+        mode:    "no-cors",
         headers: { "Content-Type": "text/plain" },
         body:    JSON.stringify({ action:"save", config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, logo:l }),
       });
-      if (!res.ok) throw new Error(res.status);
+      // Con no-cors no podemos leer la respuesta — asumimos éxito si no hubo excepción de red
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       setLastSync(now); LS.set("last_sync", now);
       setSyncStatus("ok");
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error al guardar en la nube","err");
+      if (!silent) showToast("Error de red al guardar","err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
     pushing.current = false;
   };
 
+  // JSONP helper: inyecta <script src="url&callback=fn"> para saltar CORS
+  const jsonpFetch = (url) => new Promise((resolve, reject) => {
+    const cbName = "_gasCb_" + Date.now();
+    const script = document.createElement("script");
+    const timer  = setTimeout(() => {
+      cleanup(); reject(new Error("Timeout"));
+    }, 15000);
+    const cleanup = () => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+    window[cbName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error("Script error")); };
+    script.src = `${url}&callback=${cbName}`;
+    document.head.appendChild(script);
+  });
+
   const gasPull = async (silent=false) => {
     if (!gasUrl) return;
     setSyncStatus("syncing");
     try {
-      // redirect: follow para manejar los redirects 302 de Google Apps Script
-      const res = await fetch(`${gasUrl}?action=load`, { redirect: "follow" });
-      if (!res.ok) throw new Error(res.status);
-      const d = await res.json();
+      const d = await jsonpFetch(`${gasUrl}?action=load`);
 
       const apply = (setter, lsKey, val) => {
         if (val === undefined || val === null) return;
