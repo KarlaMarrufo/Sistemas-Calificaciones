@@ -666,61 +666,20 @@ function App() {
      - Responde con ContentService JSON → CORS automático de Google
   ─────────────────────────────────────────────────────────────── */
 
-  // Función base — GET con ?action=X&data=JSON
-  // GET nunca tiene restricción CORS, funciona en todos los navegadores e iOS
-  const gasCall = async (data) => {
-    const action = data.action;
-    // Separamos action de los demás datos
-    const { action: _, ...rest } = data;
-    const params = new URLSearchParams({ action });
-    // Cada campo va como parámetro separado para no superar límite de URL
-    // EXCEPTO logo que va omitido en llamadas automáticas
-    Object.keys(rest).forEach(k => {
-      const v = rest[k];
-      if (v !== undefined) params.set(k, typeof v === "string" ? v : JSON.stringify(v));
-    });
-    const res = await fetch(`${gasUrl}?${params.toString()}`);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  };
-
-  const gasPush = async (silent=false, withLogo=false) => {
-    if (!gasUrl || pushing.current) return;
-    pushing.current = true;
-    setSyncStatus("syncing");
-    try {
-      const { config:c, students:s, weights:w, grades:g,
-              totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
-
-      const d = await gasCall({
-        action:"save", config:c, students:s,
-        weights:w, grades:g, totals:t, rawGrades:r,
-      });
-      if (d.error) throw new Error(d.error);
-
-      if (withLogo && l) {
-        await gasCall({ action:"saveLogo", logo:l });
-      }
-
-      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
-      setLastSync(now); LS.set("last_sync", now);
-      setSyncStatus("ok");
-      if (!silent) showToast("☁️ Guardado en la nube ✓");
-      setTimeout(()=>setSyncStatus("idle"),3000);
-    } catch(e) {
-      setSyncStatus("err");
-      if (!silent) showToast("Error sync: "+e.message,"err");
-      setTimeout(()=>setSyncStatus("idle"),5000);
-    }
-    pushing.current = false;
-  };
+  /* PULL — GET ?action=load  (URL corta, sin CORS)
+     PUSH — POST con Content-Type:text/plain
+             GAS hace: e.parameter = JSON.parse(body) → doGet(e)
+             text/plain = simple request = sin preflight = sin CORS
+             La respuesta final de GAS siempre tiene CORS headers    */
 
   const gasPull = async (silent=false) => {
     if (!gasUrl) return;
     setSyncStatus("syncing");
     try {
-      const d = await gasCall({ action:"load" });
-      if (d.error) throw new Error(d.error);
+      const res = await fetch(`${gasUrl}?action=load`);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || "Error al cargar");
 
       const apply = (setter, lsKey, val) => {
         if (val === undefined || val === null) return;
@@ -744,9 +703,47 @@ function App() {
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Sync error: "+e.message,"err");
+      if (!silent) showToast("Error al obtener datos: "+e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
+  };
+
+  const gasPush = async (silent=false, withLogo=false) => {
+    if (!gasUrl || pushing.current) return;
+    pushing.current = true;
+    setSyncStatus("syncing");
+    try {
+      const { config:c, students:s, weights:w, grades:g,
+              totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
+
+      const payload = {
+        action:"save",
+        config:c, students:s, weights:w,
+        grades:g, totals:t, rawGrades:r,
+      };
+      if (withLogo && l) payload.logo = l;
+
+      // POST text/plain → sin preflight CORS → GAS puede leer y responder
+      const res = await fetch(gasUrl, {
+        method:  "POST",
+        headers: { "Content-Type": "text/plain" },
+        body:    JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || "Error al guardar");
+
+      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+      setLastSync(now); LS.set("last_sync", now);
+      setSyncStatus("ok");
+      if (!silent) showToast("☁️ Guardado en la nube ✓");
+      setTimeout(()=>setSyncStatus("idle"),3000);
+    } catch(e) {
+      setSyncStatus("err");
+      if (!silent) showToast("Error al guardar: "+e.message,"err");
+      setTimeout(()=>setSyncStatus("idle"),5000);
+    }
+    pushing.current = false;
   };
 
   /* Push diferido 10 seg tras el último cambio */
