@@ -653,66 +653,71 @@ function App() {
     setTimeout(()=>setToast(null),2400);
   };
 
-  /* ─── Helpers de estado reactivo para el push ─────────────── */
+  /* ─── Estado reactivo para push ───────────────────────────── */
   const stateRef = useRef({});
   useEffect(() => {
     stateRef.current = { config, students, weights, grades, totals, rawGrades, schoolLogo };
   }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
 
-  /* ─── GAS API ─────────────────────────────────────────────────
-     PUSH: no-cors (GAS acepta el dato, no podemos leer respuesta
-           pero se guarda — marcamos ok optimistamente)
-     PULL: JSONP inyectando <script> tag — evita CORS por completo
-  ──────────────────────────────────────────────────────────── */
-  const gasPush = async (silent=false) => {
+  /* ─── GAS API ──────────────────────────────────────────────────
+     IGUAL QUE EL SISTEMA DEL HOTEL:
+     Todo va por GET con URLSearchParams — sin POST, sin CORS.
+     Los datos van codificados como parámetro ?data=JSON
+     El logo se sube por separado solo en "Forzar subida"
+     porque base64 puede ser muy grande para la URL.
+  ─────────────────────────────────────────────────────────────── */
+
+  const gasGet = (params) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetch(`${gasUrl}?${qs}`);
+  };
+
+  const gasPush = async (silent=false, withLogo=false) => {
     if (!gasUrl || pushing.current) return;
     pushing.current = true;
     setSyncStatus("syncing");
     try {
-      const { config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
-      // no-cors: el navegador no puede leer la respuesta pero GAS recibe y guarda los datos
-      await fetch(gasUrl, {
-        method:  "POST",
-        mode:    "no-cors",
-        headers: { "Content-Type": "text/plain" },
-        body:    JSON.stringify({ action:"save", config:c, students:s, weights:w, grades:g, totals:t, rawGrades:r, logo:l }),
+      const { config:c, students:s, weights:w, grades:g,
+              totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
+
+      // Datos principales por GET (igual que el hotel)
+      const res = await gasGet({
+        action:    "save",
+        config:    JSON.stringify(c),
+        students:  JSON.stringify(s),
+        weights:   JSON.stringify(w),
+        grades:    JSON.stringify(g),
+        totals:    JSON.stringify(t),
+        rawGrades: JSON.stringify(r),
       });
-      // Con no-cors no podemos leer la respuesta — asumimos éxito si no hubo excepción de red
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || "Error al guardar");
+
+      // Logo por separado solo si se pidió (es muy grande para auto-sync)
+      if (withLogo && l) {
+        await gasGet({ action:"saveLogo", logo: l });
+      }
+
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       setLastSync(now); LS.set("last_sync", now);
       setSyncStatus("ok");
+      if (!silent) showToast("☁️ Datos guardados en la nube ✓");
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error de red al guardar","err");
+      if (!silent) showToast("Error al guardar: " + e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
     pushing.current = false;
   };
 
-  // JSONP helper: inyecta <script src="url&callback=fn"> para saltar CORS
-  const jsonpFetch = (url) => new Promise((resolve, reject) => {
-    const cbName = "_gasCb_" + Date.now();
-    const script = document.createElement("script");
-    const timer  = setTimeout(() => {
-      cleanup(); reject(new Error("Timeout"));
-    }, 15000);
-    const cleanup = () => {
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      clearTimeout(timer);
-    };
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error("Script error")); };
-    script.src = `${url}&callback=${cbName}`;
-    document.head.appendChild(script);
-  });
-
   const gasPull = async (silent=false) => {
     if (!gasUrl) return;
     setSyncStatus("syncing");
     try {
-      const d = await jsonpFetch(`${gasUrl}?action=load`);
+      const res = await gasGet({ action:"load" });
+      const d   = await res.json();
+      if (!d.ok) throw new Error(d.error || "Error al cargar");
 
       const apply = (setter, lsKey, val) => {
         if (val === undefined || val === null) return;
@@ -726,9 +731,9 @@ function App() {
       apply(setRawGrades, "raw", d.rawGrades);
       if (d.logo !== undefined) {
         setSchoolLogo(d.logo);
-        try{ if(d.logo) localStorage.setItem("logo",d.logo); else localStorage.removeItem("logo"); }catch{}
+        try{ if(d.logo) localStorage.setItem("logo",d.logo);
+             else localStorage.removeItem("logo"); }catch{}
       }
-
       const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
       setLastSync(now); LS.set("last_sync", now);
       setSyncStatus("ok");
@@ -736,19 +741,19 @@ function App() {
       setTimeout(()=>setSyncStatus("idle"),3000);
     } catch(e) {
       setSyncStatus("err");
-      if (!silent) showToast("Error al obtener datos de la nube","err");
+      if (!silent) showToast("Error al obtener datos: " + e.message,"err");
       setTimeout(()=>setSyncStatus("idle"),5000);
     }
   };
 
-  /* Push diferido 8 seg tras el último cambio */
+  /* Push diferido 10 seg tras el último cambio */
   const schedulePush = () => {
     if (!gasUrl) return;
     clearTimeout(pushTimer.current);
-    pushTimer.current = setTimeout(()=>gasPush(true), 8000);
+    pushTimer.current = setTimeout(()=>gasPush(true, false), 10000);
   };
 
-  /* ─── Save helpers — cada guardado dispara sync ────────────── */
+  /* ─── Save helpers ─────────────────────────────────────────── */
   const saveConfig    = c => { setConfig(c);    LS.set("cfg",c);  schedulePush(); };
   const saveStudents  = s => { setStudents(s);  LS.set("stu",s);  schedulePush(); };
   const saveWeights   = w => { setWeights(w);   LS.set("wts",w);  schedulePush(); };
@@ -858,7 +863,7 @@ function App() {
         {tab==="pesos"    && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
         {tab==="aciertos" && <TabAciertos config={config} totals={totals} weights={weights} onSaveTotals={saveTotals} showToast={showToast}/>}
         {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights} schoolLogo={schoolLogo}/>}
-        {tab==="sync"     && isAdmin && <TabSync syncStatus={syncStatus} lastSync={lastSync} onPull={()=>gasPull(false)} onPush={()=>gasPush(false)} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} schoolLogo={schoolLogo}/>}
+        {tab==="sync"     && isAdmin && <TabSync syncStatus={syncStatus} lastSync={lastSync} onPull={()=>gasPull(false)} onPush={()=>gasPush(false, true)} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} schoolLogo={schoolLogo}/>}
         {tab==="usuarios" && isAdmin && <TabUsuarios showToast={showToast}/>}
       </div>
 
