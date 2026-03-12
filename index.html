@@ -1,2688 +1,1304 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>Calificaciones</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calificaciones">
+<title>Sistema de Calificaciones</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #1c2333; --card: #21262d;
+  --border: #30363d; --accent: #2563eb; --accent2: #1d4ed8;
+  --green: #16a34a; --red: #dc2626; --yellow: #d97706; --purple: #7c3aed;
+  --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
+  --radius: 8px; --radius2: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
 
-  <!-- ═══ PWA — Apariencia de App Nativa ═══ -->
-  <!-- Android / Chrome -->
-  <meta name="theme-color" content="#0d0d1a"/>
-  <meta name="mobile-web-app-capable" content="yes"/>
-  <meta name="application-name" content="Calificaciones"/>
+/* ── LOGIN ──────────────────────────────────────────────────── */
+#loginScreen { position:fixed; inset:0; background:var(--bg); display:flex;
+  align-items:center; justify-content:center; z-index:9999; padding:20px; }
+#loginScreen.hidden { display:none; }
+.login-box { background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius2); padding:36px 32px; width:100%; max-width:380px; }
+.login-logo { text-align:center; margin-bottom:28px; }
+.login-logo img { max-width:120px; max-height:80px; border-radius:8px; margin-bottom:10px; }
+.login-logo h1 { font-size:1.2rem; font-weight:700; }
+.login-logo p { color:var(--text2); font-size:.85rem; margin-top:4px; }
+.login-url { background:var(--bg3); border-radius:6px; padding:10px 12px;
+  margin-bottom:16px; font-size:.8rem; color:var(--text2); text-align:center; }
+.login-url.no-url { color:var(--yellow); cursor:pointer; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:.8rem; color:var(--text2);
+  margin-bottom:5px; font-weight:500; }
+.field input { width:100%; background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius); padding:10px 12px; color:var(--text);
+  font-size:.9rem; outline:none; }
+.field input:focus { border-color:var(--accent); }
+.btn-login { width:100%; background:var(--accent); color:#fff; border:none;
+  border-radius:var(--radius); padding:12px; font-size:.95rem; font-weight:600;
+  cursor:pointer; margin-top:6px; }
+.btn-login:hover { background:var(--accent2); }
+.login-err { color:var(--red); font-size:.8rem; margin-top:10px;
+  text-align:center; display:none; }
+.login-err.show { display:block; }
 
-  <!-- iOS / Safari -->
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Calificaciones"/>
+/* ── HEADER ─────────────────────────────────────────────────── */
+header { background:var(--bg2); border-bottom:1px solid var(--border);
+  padding:10px 16px; display:flex; align-items:center; gap:10px; position:sticky;
+  top:0; z-index:100; }
+.hdr-logo { width:32px; height:32px; border-radius:6px; object-fit:cover; }
+.hdr-logo-placeholder { width:32px; height:32px; border-radius:6px;
+  background:var(--accent); display:flex; align-items:center;
+  justify-content:center; font-size:16px; flex-shrink:0; }
+.hdr-info { flex:1; min-width:0; }
+.hdr-title { font-weight:700; font-size:.95rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hdr-sub { font-size:.75rem; color:var(--text2); }
+.hdr-sync { display:flex; align-items:center; gap:6px; }
+.sync-dot { width:8px; height:8px; border-radius:50%; background:var(--text3); }
+.sync-dot.ok { background:var(--green); }
+.sync-dot.syncing { background:var(--yellow); animation:pulse .8s infinite; }
+.sync-dot.err { background:var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.hdr-sync-time { font-size:.72rem; color:var(--text2); }
+.btn-icon { background:none; border:1px solid var(--border); border-radius:6px;
+  padding:5px 8px; color:var(--text2); cursor:pointer; font-size:.8rem; }
+.btn-icon:hover { border-color:var(--accent); color:var(--accent); }
 
-  <!-- Splash screen color iOS -->
-  <meta name="apple-touch-startup-image" content=""/>
+/* ── NAV ────────────────────────────────────────────────────── */
+nav { background:var(--bg2); border-bottom:1px solid var(--border);
+  display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+nav::-webkit-scrollbar { display:none; }
+.nav-btn { flex:0 0 auto; padding:11px 16px; background:none; border:none;
+  color:var(--text2); cursor:pointer; font-size:.8rem; white-space:nowrap;
+  border-bottom:2px solid transparent; display:flex; flex-direction:column;
+  align-items:center; gap:2px; min-width:60px; }
+.nav-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.nav-btn .nav-ico { font-size:1.1rem; }
 
-  <!-- Manifest dinámico (se inyecta via JS más abajo) -->
-  <link id="manifest-link" rel="manifest"/>
+/* ── MAIN ────────────────────────────────────────────────────── */
+main { padding:16px; max-width:960px; margin:0 auto; }
+.tab { display:none; }
+.tab.active { display:block; }
 
-  <!-- Icono para iOS (apple-touch-icon) — se genera via canvas -->
-  <link id="apple-touch-icon" rel="apple-touch-icon"/>
+/* ── CARDS & SECTIONS ────────────────────────────────────────── */
+.card { background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius2); padding:16px; margin-bottom:14px; }
+.card-title { font-size:.85rem; font-weight:600; color:var(--text2);
+  text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
+.row { display:flex; gap:10px; flex-wrap:wrap; }
+.row .field { flex:1; min-width:140px; }
 
-  <!-- Favicon -->
-  <link id="favicon" rel="icon" type="image/png"/>
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px;
+  border-radius:var(--radius); border:none; cursor:pointer; font-size:.85rem;
+  font-weight:500; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-danger { background:var(--red); color:#fff; }
+.btn-success { background:var(--green); color:#fff; }
+.btn-outline { background:none; border:1px solid var(--border); color:var(--text2); }
+.btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+.btn-sm { padding:5px 10px; font-size:.78rem; }
 
-  <script>
-  // ── Genera el ícono de la app con Canvas (sin archivos externos) ──
-  function makeIcon(size) {
-    const c = document.createElement("canvas");
-    c.width = c.height = size;
-    const ctx = c.getContext("2d");
-    const r = size * 0.18;
+/* ── FORMS ────────────────────────────────────────────────────── */
+input, select { width:100%; background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius); padding:8px 10px; color:var(--text);
+  font-size:.85rem; outline:none; }
+input:focus, select:focus { border-color:var(--accent); }
+input[type=number] { -moz-appearance:textfield; }
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
 
-    // Fondo degradado azul oscuro
-    const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0, "#1a1a4e");
-    grad.addColorStop(1, "#0d0d2e");
-    ctx.fillStyle = grad;
-    // Rounded rect
-    ctx.beginPath();
-    ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
-    ctx.quadraticCurveTo(size, 0, size, r);
-    ctx.lineTo(size, size-r);
-    ctx.quadraticCurveTo(size, size, size-r, size);
-    ctx.lineTo(r, size);
-    ctx.quadraticCurveTo(0, size, 0, size-r);
-    ctx.lineTo(0, r);
-    ctx.quadraticCurveTo(0, 0, r, 0);
-    ctx.closePath();
-    ctx.fill();
+/* ── TABLE ────────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; min-width:500px; }
+th { background:var(--bg3); padding:8px 10px; text-align:left;
+  font-size:.75rem; color:var(--text2); font-weight:600;
+  text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+td { padding:7px 10px; border-bottom:1px solid var(--border);
+  font-size:.83rem; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(255,255,255,.02); }
+td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 
-    // Brillo superior
-    const shine = ctx.createLinearGradient(0, 0, 0, size*0.5);
-    shine.addColorStop(0, "rgba(255,255,255,0.10)");
-    shine.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = shine;
-    ctx.beginPath();
-    ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
-    ctx.quadraticCurveTo(size, 0, size, r);
-    ctx.lineTo(size, size*0.5);
-    ctx.lineTo(0, size*0.5);
-    ctx.lineTo(0, r);
-    ctx.quadraticCurveTo(0, 0, r, 0);
-    ctx.closePath();
-    ctx.fill();
+/* ── GRADES HEADER ────────────────────────────────────────────── */
+.subject-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.subject-tab { padding:6px 12px; border-radius:20px; border:1px solid var(--border);
+  background:none; color:var(--text2); cursor:pointer; font-size:.8rem; }
+.subject-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.bim-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.bim-tab { padding:5px 11px; border-radius:20px; border:1px solid var(--border);
+  background:none; color:var(--text2); cursor:pointer; font-size:.78rem; }
+.bim-tab.active { background:var(--purple); border-color:var(--purple); color:#fff; }
 
-    // Círculo acento azul
-    ctx.beginPath();
-    ctx.arc(size/2, size*0.42, size*0.30, 0, Math.PI*2);
-    ctx.fillStyle = "#4361ee22";
-    ctx.fill();
-    ctx.strokeStyle = "#4361ee66";
-    ctx.lineWidth = size * 0.025;
-    ctx.stroke();
+/* ── WEIGHT ROW ──────────────────────────────────────────────── */
+.weight-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  padding:10px; background:var(--bg3); border-radius:var(--radius);
+  margin-bottom:12px; }
+.weight-item { display:flex; align-items:center; gap:5px; }
+.weight-item label { font-size:.75rem; color:var(--text2); white-space:nowrap; }
+.weight-item input { width:55px; }
+.weight-total { font-size:.78rem; padding:4px 8px; border-radius:4px;
+  font-weight:600; }
+.weight-total.ok { background:rgba(22,163,74,.15); color:#4ade80; }
+.weight-total.bad { background:rgba(220,38,38,.15); color:#f87171; }
 
-    // Emoji 🏫 centrado
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `${size * 0.40}px serif`;
-    ctx.fillText("🏫", size/2, size * 0.42);
+/* ── GRADE BADGE ─────────────────────────────────────────────── */
+.grade-val { font-weight:700; }
+.MB { color:#4ade80; } .B { color:#60a5fa; }
+.S { color:#fbbf24; } .NS { color:#f87171; }
+.grade-cell { text-align:center; }
 
-    // Texto "CAL" abajo
-    ctx.font = `bold ${size * 0.13}px 'Segoe UI', sans-serif`;
-    ctx.fillStyle = "#a0a8ff";
-    ctx.letterSpacing = size * 0.01 + "px";
-    ctx.fillText("CALIFICACIONES", size/2, size * 0.80);
+/* ── STUDENT ACTIONS ─────────────────────────────────────────── */
+.student-row td:first-child { font-weight:500; }
+.del-btn { background:none; border:none; color:var(--red);
+  cursor:pointer; padding:3px 6px; border-radius:4px; font-size:.85rem; }
+.del-btn:hover { background:rgba(220,38,38,.12); }
+.edit-btn { background:none; border:none; color:var(--accent);
+  cursor:pointer; padding:3px 6px; border-radius:4px; font-size:.85rem; }
+.add-student-row { display:flex; gap:8px; margin-top:10px; }
+.add-student-row input { flex:1; }
 
-    // Línea decorativa
-    ctx.strokeStyle = "#4361ee88";
-    ctx.lineWidth = size * 0.012;
-    ctx.beginPath();
-    ctx.moveTo(size*0.20, size*0.70);
-    ctx.lineTo(size*0.80, size*0.70);
-    ctx.stroke();
+/* ── REPORTS ─────────────────────────────────────────────────── */
+.report-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.report-filter select { flex:1; min-width:120px; }
+.report-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.summary-card { flex:1; min-width:80px; background:var(--bg3);
+  border-radius:var(--radius); padding:10px; text-align:center; }
+.summary-card .s-val { font-size:1.4rem; font-weight:700; }
+.summary-card .s-lbl { font-size:.72rem; color:var(--text2); margin-top:2px; }
 
-    return c.toDataURL("image/png");
-  }
+/* ── SYNC TAB ─────────────────────────────────────────────────── */
+.sync-status-box { display:flex; align-items:center; gap:12px; padding:14px;
+  background:var(--bg3); border-radius:var(--radius); margin-bottom:14px; }
+.sync-status-icon { font-size:1.6rem; }
+.sync-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.url-row { display:flex; gap:8px; }
+.url-row input { flex:1; font-family:monospace; font-size:.78rem; }
+.info-box { background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.3);
+  border-radius:var(--radius); padding:12px; font-size:.8rem;
+  color:var(--text2); line-height:1.6; }
+.info-box strong { color:var(--text); }
 
-  // Inyectar iconos y manifest cuando el DOM esté listo
-  window.addEventListener("DOMContentLoaded", () => {
-    try {
-      const icon192 = makeIcon(192);
-      const icon512 = makeIcon(512);
-      const icon180 = makeIcon(180);
+/* ── TOAST ────────────────────────────────────────────────────── */
+#toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:10px 18px; font-size:.83rem; opacity:0; transition:all .25s;
+  pointer-events:none; z-index:9000; white-space:nowrap; max-width:90vw; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.success { border-color:var(--green); color:#4ade80; }
+#toast.error { border-color:var(--red); color:#f87171; }
+#toast.warning { border-color:var(--yellow); color:#fbbf24; }
 
-      // apple-touch-icon (iOS)
-      document.getElementById("apple-touch-icon").href = icon180;
-      // favicon
-      document.getElementById("favicon").href = icon192;
+/* ── MODAL ────────────────────────────────────────────────────── */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
+  align-items:center; justify-content:center; z-index:8000; padding:20px; }
+.modal-bg.show { display:flex; }
+.modal { background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius2); padding:24px; width:100%; max-width:440px; }
+.modal h3 { margin-bottom:16px; font-size:1rem; }
+.modal-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
 
-      // Web App Manifest
-      const manifest = {
-        name: "Sistema de Calificaciones",
-        short_name: "Calificaciones",
-        description: "Sistema de gestión de calificaciones escolares",
-        start_url: "./",
-        display: "standalone",
-        orientation: "portrait-primary",
-        background_color: "#0d0d1a",
-        theme_color: "#0d0d1a",
-        lang: "es",
-        icons: [
-          { src: icon192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-          { src: icon512, sizes: "512x512", type: "image/png", purpose: "any maskable" },
-        ]
-      };
-      const blob = new Blob([JSON.stringify(manifest)], {type:"application/json"});
-      document.getElementById("manifest-link").href = URL.createObjectURL(blob);
-    } catch(e) { console.warn("PWA setup:", e); }
-  });
+/* ── CONFIG LOGO ──────────────────────────────────────────────── */
+.logo-preview { width:80px; height:80px; border-radius:8px;
+  object-fit:cover; display:none; }
+.logo-placeholder { width:80px; height:80px; border-radius:8px;
+  background:var(--bg3); border:2px dashed var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.8rem; cursor:pointer; }
 
-  // ── Service Worker (cache offline) ──
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      const swCode = `
-        const CACHE = "calificaciones-v2";
-        const URLS  = [self.registration.scope];
-        self.addEventListener("install",  e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(URLS))); self.skipWaiting(); });
-        self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); self.clients.claim(); });
-        self.addEventListener("fetch", e => {
-          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-        });
-      `;
-      const swBlob = new Blob([swCode], {type:"text/javascript"});
-      navigator.serviceWorker.register(URL.createObjectURL(swBlob))
-        .catch(()=>{});
-    });
-  }
-  </script>
+/* ── PRINT ────────────────────────────────────────────────────── */
+@media print {
+  header, nav, .report-filter, .report-btns, #toast { display:none !important; }
+  body { background:#fff; color:#000; }
+  .card { border:1px solid #ccc; }
+  table { border:1px solid #ccc; }
+  th, td { border:1px solid #ddd; }
+}
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { height: 100%; }
-    body {
-      background: #0d0d1a; color: #e8e8f0;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      height: 100%; min-height: 100vh;
-      /* Evita rebote en iOS */
-      overscroll-behavior: none;
-      /* Respeta el notch / barra de estado */
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
-    /* Evita zoom al tocar inputs en iOS */
-    input, select, textarea { font-size: 16px !important; }
-    input[type=number] { font-size: 14px !important; }
-    input[type=number]::-webkit-inner-spin-button { opacity: 1; }
-    /* Quita el highlight azul al tocar en móvil */
-    * { -webkit-tap-highlight-color: transparent; }
-    /* Scrollbars */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: #1a1a2e; }
-    ::-webkit-scrollbar-thumb { background: #3d3d60; border-radius: 3px; }
-    /* Animaciones */
-    @keyframes fadeIn  { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-    @keyframes pulse   { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
-    @keyframes fadeUp  { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes pulse   { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.04)} }
-    @keyframes spin    { to { transform: rotate(360deg); } }
-    @keyframes shake   { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
-    @keyframes starFloat { 0%{opacity:0;transform:translateY(0)} 50%{opacity:.7} 100%{opacity:0;transform:translateY(-80px)} }
-    input:focus, select:focus { border-color: #4361ee !important; outline: none; }
-    table { border-collapse: collapse; }
-    .login-wrap { animation: fadeUp .5s ease both; }
-    .shake-anim { animation: shake .4s ease; }
-    /* Tab bar sticky bottom en móvil — deslizable horizontalmente */
-    @media (max-width: 600px) {
-      .tab-bar {
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0; right: 0;
-        z-index: 50;
-        padding-bottom: env(safe-area-inset-bottom);
-        border-top: 1px solid #2d2d4e !important;
-        border-bottom: none !important;
-        background: #0f0f22 !important;
-        box-shadow: 0 -4px 20px #00000060;
-        /* scroll horizontal táctil en iOS */
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        scrollbar-width: none !important;
-        justify-content: flex-start !important;
-        flex-wrap: nowrap !important;
-      }
-      .tab-bar::-webkit-scrollbar { display: none; }
-      .tab-bar button {
-        flex: 0 0 auto !important;
-        flex-direction: column !important;
-        min-width: 64px !important;
-        padding: 8px 10px !important;
-        font-size: 10px !important;
-        gap: 3px;
-      }
-      .tab-bar button .tab-emoji { display: block; font-size: 20px; }
-      .tab-bar button .tab-text  { display: block; font-size: 10px; white-space: nowrap; }
-      .main-content { padding-bottom: calc(74px + env(safe-area-inset-bottom)) !important; }
-      .app-header   { padding: 10px 14px !important; }
-    }
-  </style>
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  main { padding:10px; }
+  .card { padding:12px; }
+  .login-box { padding:24px 18px; }
+}
+</style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
 
-
-/* ══════════════════════════════════════════════════════════════ */
-/*  ★  CONFIGURACIÓN — PEGAR URL DEL APPS SCRIPT AQUÍ  ★        */
-/*  Solo se cambia esta línea cuando se redespliega el script.   */
-/* ══════════════════════════════════════════════════════════════ */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxiHki3ZDCoBgraYf6bYgDc7dCimn3IwjPiK-mUsuz-pNR7JJWEKgatSyd6qCd2yUXo/exec";
-/* ══════════════════════════════════════════════════════════════ */
-
-/* ── Constants ───────────────────────────────────────────────── */
-const SUBJECTS  = ["Lenguajes","Saberes","Ética","Humano"];
-const CRITERIA  = ["tareas","trabajos","disciplina","examen"];
-const C_LABELS  = { tareas:"Tareas", trabajos:"Trabajos", disciplina:"Disciplina", examen:"Examen" };
-const C_ICONS   = { tareas:"📋", trabajos:"📝", disciplina:"🎯", examen:"📊" };
-// Tipo de cada criterio: cantidad | pct_directo | reactivos
-const CRIT_TYPE = { tareas:"cantidad", trabajos:"cantidad", disciplina:"pct_directo", examen:"reactivos" };
-const CRIT_TYPE_LABEL = {
-  cantidad:    { short:"cant.", hint:"Cantidad total a completar", inputLabel:"piezas" },
-  pct_directo: { short:"% dir.", hint:"La maestra asigna el porcentaje directamente", inputLabel:"%" },
-  reactivos:   { short:"rcts.", hint:"Total de reactivos del examen", inputLabel:"rcts" },
-};
-const SUB_COLOR = {
-  Lenguajes:{ bg:"#1e3a5f", accent:"#4dabf7", light:"#d0ebff" },
-  Saberes:  { bg:"#1e472a", accent:"#51cf66", light:"#d3f9d8" },
-  Ética:    { bg:"#3d1f5a", accent:"#cc5de8", light:"#f3d9fa" },
-  Humano:   { bg:"#5a3a1a", accent:"#fd7e14", light:"#ffe8cc" },
-};
-const DEF_W = { tareas:20, trabajos:20, disciplina:20, examen:40 };
-const uid   = () => Math.random().toString(36).slice(2,10);
-
-/* ── Auth ────────────────────────────────────────────────────── */
-// Simple hash (djb2) — suficiente para cliente sin servidor
-function hashStr(s) {
-  let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h)+s.charCodeAt(i)|0;
-  return (h>>>0).toString(16);
-}
-
-// Usuarios por defecto — Master Admin puede cambiarlos desde el sistema
-const DEFAULT_USERS = [
-  { id:"u1", username:"karlamarrufo", passHash: hashStr("Karla2026"), role:"docente",      name:"Karla Marrufo",  active:true },
-  { id:"u2", username:"edelchavez",   passHash: hashStr("Edel2026"),  role:"masteradmin",  name:"Edel Chávez",    active:true },
-];
-
-const ROLE_LABELS = { docente:"Docente", masteradmin:"Master Admin" };
-const ROLE_COLORS = { docente:"#4dabf7", masteradmin:"#ffd43b" };
-const ROLE_ICONS  = { docente:"👩‍🏫", masteradmin:"🛡️" };
-
-// Tabs por rol
-const TABS_DOCENTE = [
-  {id:"config",    label:"⚙️ Configuración"},
-  {id:"califs",    label:"✏️ Calificaciones"},
-  {id:"aciertos",  label:"🎯 Aciertos"},
-  {id:"pesos",     label:"⚖️ Porcentajes"},
-  {id:"alumnos",   label:"👥 Alumnos"},
-  {id:"reportes",  label:"📊 Reportes"},
-];
-const TABS_ADMIN = [
-  {id:"config",    label:"⚙️ Configuración"},
-  {id:"alumnos",   label:"👥 Alumnos"},
-  {id:"califs",    label:"✏️ Calificaciones"},
-  {id:"pesos",     label:"⚖️ Porcentajes"},
-  {id:"aciertos",  label:"🎯 Aciertos"},
-  {id:"reportes",  label:"📊 Reportes"},
-  {id:"sync",      label:"☁️ Sincronizar"},
-  {id:"usuarios",  label:"🔑 Usuarios"},
-];
-
-/* ── Helpers ─────────────────────────────────────────────────── */
-function getGrade(v) {
-  const n = parseFloat(v);
-  if (isNaN(n)) return { label:"–", color:"#888" };
-  if (n >= 9)   return { label:"MB", color:"#51cf66" };
-  if (n >= 7)   return { label:"B",  color:"#4dabf7" };
-  if (n >= 6)   return { label:"S",  color:"#ffd43b" };
-  return              { label:"NS", color:"#ff6b6b" };
-}
-
-function calcAvg(g, w) {
-  const ww = w || DEF_W;
-  const total = CRITERIA.reduce((s,c)=>s+(ww[c]||0),0);
-  if (!total) return null;
-  let sum=0, has=false;
-  for (const c of CRITERIA) {
-    const v = parseFloat(g?.[c]);
-    if (!isNaN(v)) { sum += v*((ww[c]||0)/total); has=true; }
-  }
-  return has ? Math.round(sum*100)/100 : null;
-}
-
-/* ── Local Storage (primary) ─────────────────────────────────── */
-const LS = {
-  get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch{ return null; } },
-  set: (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} },
-};
-
-// Restore backup from sessionStorage if present (after cache refresh)
-(()=>{
-  try {
-    const raw = sessionStorage.getItem("__data_backup__");
-    if (raw) {
-      const backup = JSON.parse(raw);
-      Object.entries(backup).forEach(([k,v]) => {
-        if (!localStorage.getItem(k)) localStorage.setItem(k, v); // only restore if missing
-      });
-      sessionStorage.removeItem("__data_backup__");
-    }
-  } catch(e) {}
-})();
-
-/* ── Apps Script API (sync/backup) ──────────────────────────── */
-async function gasLoad(url) {
-  const r = await fetch(`${url}?action=load`);
-  if (!r.ok) throw new Error("Error al conectar con Apps Script");
-  return r.json();
-}
-async function gasSave(url, payload) {
-  await fetch(url, {
-    method:"POST",
-    body: JSON.stringify({action:"save",...payload}),
-  });
-}
-
-/* ── UI Atoms ────────────────────────────────────────────────── */
-const Inp = ({value,onChange,placeholder,style,type="text",min,max,step,onKeyDown}) => (
-  <input type={type} value={value} onChange={onChange} placeholder={placeholder}
-    min={min} max={max} step={step} onKeyDown={onKeyDown}
-    style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,color:"#e8e8f0",
-      padding:"7px 10px",fontSize:13,width:"100%",...style}}/>
-);
-
-const Sel = ({value,onChange,children,style}) => (
-  <select value={value} onChange={onChange}
-    style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:6,color:"#e8e8f0",
-      padding:"7px 10px",fontSize:13,...style}}>{children}</select>
-);
-
-const Btn = ({onClick,children,variant="primary",style,disabled}) => {
-  const V = {
-    primary:  {background:"#4361ee",color:"#fff",border:"none"},
-    secondary:{background:"#2d2d4e",color:"#c0c0e0",border:"1px solid #3d3d60"},
-    danger:   {background:"#ff6b6b22",color:"#ff6b6b",border:"1px solid #ff6b6b44"},
-    success:  {background:"#51cf6622",color:"#51cf66",border:"1px solid #51cf6644"},
-    warning:  {background:"#ffd43b22",color:"#ffd43b",border:"1px solid #ffd43b44"},
-  };
-  return (
-    <button onClick={onClick} disabled={disabled}
-      style={{...V[variant],borderRadius:7,padding:"7px 14px",fontSize:13,cursor:disabled?"not-allowed":"pointer",
-        opacity:disabled?0.5:1,fontWeight:600,transition:"opacity .15s",whiteSpace:"nowrap",...style}}>
-      {children}
-    </button>
-  );
-};
-
-const Card = ({children,style}) => (
-  <div style={{background:"#16162a",border:"1px solid #2d2d4e",borderRadius:10,padding:16,...style}}>
-    {children}
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <img id="loginLogo" src="" style="display:none">
+      <div id="loginLogoPlaceholder" style="font-size:2.5rem; margin-bottom:8px;">🏫</div>
+      <h1 id="loginTitle">Sistema de Calificaciones</h1>
+      <p id="loginSubtitle">Inicia sesión para continuar</p>
+    </div>
+    <div id="loginUrlInfo" class="login-url no-url" onclick="showUrlModal()">
+      ⚠️ Sin conexión configurada — toca para configurar
+    </div>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="usuario" autocomplete="username"
+             onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••"
+             autocomplete="current-password"
+             onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
   </div>
-);
+</div>
 
-const Badge = ({value}) => {
-  const g = getGrade(value);
-  return <span style={{background:g.color+"22",color:g.color,border:`1px solid ${g.color}44`,
-    borderRadius:4,fontSize:10,padding:"1px 5px",fontWeight:700,letterSpacing:1}}>{g.label}</span>;
+<!-- HEADER -->
+<header>
+  <div class="hdr-logo-placeholder" id="hdrLogoBox" onclick="goTab('config')">🏫</div>
+  <div class="hdr-info">
+    <div class="hdr-title" id="hdrTitle">Sistema de Calificaciones</div>
+    <div class="hdr-sub" id="hdrSub">–</div>
+  </div>
+  <div class="hdr-sync">
+    <div class="sync-dot" id="syncDot"></div>
+    <span class="hdr-sync-time" id="syncTime">–</span>
+  </div>
+  <button class="btn-icon" onclick="doSync()" title="Sincronizar">🔄</button>
+  <button class="btn-icon" onclick="doLogout()" title="Salir">👤</button>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button class="nav-btn active" id="nav-config"   onclick="goTab('config')">
+    <span class="nav-ico">⚙️</span>Configuración</button>
+  <button class="nav-btn" id="nav-students" onclick="goTab('students')">
+    <span class="nav-ico">👥</span>Alumnos</button>
+  <button class="nav-btn" id="nav-grades"   onclick="goTab('grades')">
+    <span class="nav-ico">✏️</span>Calificaciones</button>
+  <button class="nav-btn" id="nav-reports"  onclick="goTab('reports')">
+    <span class="nav-ico">📊</span>Reportes</button>
+  <button class="nav-btn" id="nav-sync"     onclick="goTab('sync')">
+    <span class="nav-ico">☁️</span>Sincronizar</button>
+</nav>
+
+<main>
+
+<!-- TAB: CONFIGURACIÓN -->
+<div class="tab active" id="tab-config">
+  <div class="card">
+    <div class="card-title">🏫 Datos del Grupo</div>
+    <div class="row">
+      <div class="field"><label>Nombre de la Escuela</label>
+        <input id="cfgSchool" placeholder="Ej. Escuela Primaria..."></div>
+      <div class="field"><label>Año Escolar</label>
+        <input id="cfgYear" placeholder="2024-2025"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Grado</label>
+        <input id="cfgGrade" placeholder="4°"></div>
+      <div class="field"><label>Grupo</label>
+        <input id="cfgGroup" placeholder="A"></div>
+      <div class="field"><label>Bimestres</label>
+        <select id="cfgBim">
+          <option value="4">4</option>
+          <option value="5" selected>5</option>
+          <option value="6">6</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveConfig()">💾 Guardar Configuración</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🖼️ Logo / Foto de la Escuela</div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <img id="logoPreview" class="logo-preview">
+      <div id="logoPlaceholder" class="logo-placeholder" onclick="document.getElementById('logoFile').click()">🏫</div>
+      <div style="font-size:.82rem; color:var(--text2); line-height:1.7;">
+        Formatos: JPG, PNG, WEBP<br>Máximo 2MB<br>
+        <a href="#" onclick="clearLogo(); return false;"
+           style="color:var(--red); text-decoration:none;">🗑️ Quitar logo</a>
+      </div>
+    </div>
+    <input type="file" id="logoFile" accept="image/*" style="display:none"
+           onchange="loadLogo(this)">
+  </div>
+  <div class="card">
+    <div class="card-title">🔒 Cambiar Contraseña</div>
+    <div class="row">
+      <div class="field"><label>Contraseña actual</label>
+        <input type="password" id="pwdOld"></div>
+      <div class="field"><label>Nueva contraseña</label>
+        <input type="password" id="pwdNew"></div>
+      <div class="field"><label>Confirmar</label>
+        <input type="password" id="pwdConf"></div>
+    </div>
+    <button class="btn btn-outline" onclick="changePassword()">🔒 Cambiar Contraseña</button>
+  </div>
+</div>
+
+<!-- TAB: ALUMNOS -->
+<div class="tab" id="tab-students">
+  <div class="card">
+    <div class="card-title">👥 Lista de Alumnos
+      <span id="studentCount" style="font-weight:400; color:var(--text3);"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table id="studentsTable">
+        <thead><tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th style="width:90px;">Acciones</th>
+        </tr></thead>
+        <tbody id="studentsTbody"></tbody>
+      </table>
+    </div>
+    <div class="add-student-row" style="margin-top:12px;">
+      <input id="newStudentName" placeholder="Nombre completo del alumno"
+             onkeydown="if(event.key==='Enter') addStudent()">
+      <button class="btn btn-primary" onclick="addStudent()">➕ Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: CALIFICACIONES -->
+<div class="tab" id="tab-grades">
+  <div class="card" style="padding-bottom:8px;">
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+      <span style="font-size:.8rem; color:var(--text2);">Materia:</span>
+      <div class="subject-tabs" id="subjectTabs" style="margin:0;"></div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span style="font-size:.8rem; color:var(--text2);">Bimestre:</span>
+      <div class="bim-tabs" id="bimTabs" style="margin:0;"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚖️ Porcentajes del Bimestre
+      <span id="weightsLabel" style="font-weight:400; color:var(--text3); text-transform:none;"></span>
+    </div>
+    <div class="weight-row" id="weightRow"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="gradesLabel">✏️ Captura de Calificaciones</div>
+    <div class="tbl-wrap">
+      <table id="gradesTable">
+        <thead id="gradesHead"></thead>
+        <tbody id="gradesTbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="saveGrades()">💾 Guardar</button>
+      <button class="btn btn-outline" onclick="renderGradesTable()">🔄 Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: REPORTES -->
+<div class="tab" id="tab-reports">
+  <div class="card">
+    <div class="card-title">🔍 Filtros</div>
+    <div class="report-filter">
+      <select id="rptSubject" onchange="renderReport()">
+        <option value="">Todas las materias</option>
+      </select>
+      <select id="rptBim" onchange="renderReport()">
+        <option value="">Todos los bimestres</option>
+      </select>
+    </div>
+    <div class="report-btns">
+      <button class="btn btn-outline" onclick="printReport()">🖨️ Imprimir</button>
+      <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇️ Excel</button>
+    </div>
+    <div class="summary-row" id="rptSummary"></div>
+    <div class="tbl-wrap">
+      <table id="rptTable">
+        <thead id="rptHead"></thead>
+        <tbody id="rptBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: SINCRONIZAR -->
+<div class="tab" id="tab-sync">
+  <div class="card">
+    <div class="card-title">☁️ Estado de Conexión</div>
+    <div class="sync-status-box">
+      <div class="sync-status-icon" id="syncIcon">⚪</div>
+      <div>
+        <div id="syncStatusText" style="font-weight:600;">Sin configurar</div>
+        <div id="syncLastTime" style="font-size:.78rem; color:var(--text2);">–</div>
+      </div>
+    </div>
+    <div class="sync-btns">
+      <button class="btn btn-primary" onclick="doSync()">⬇️ Actualizar desde nube</button>
+      <button class="btn btn-outline" onclick="doUpload(false)">⬆️ Subir a nube</button>
+      <button class="btn btn-success" onclick="doUpload(true)">⬆️⭐ Subir con logo</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔗 URL del Apps Script</div>
+    <div class="url-row">
+      <input type="url" id="apiUrlInput"
+             placeholder="https://script.google.com/macros/s/.../exec"
+             onkeydown="if(event.key==='Enter') saveApiUrl()">
+      <button class="btn btn-primary" onclick="saveApiUrl()">Guardar</button>
+    </div>
+    <div id="apiUrlStatus" style="font-size:.78rem; color:var(--text3); margin-top:6px;"></div>
+  </div>
+  <div class="card">
+    <div class="info-box">
+      <strong>Cómo configurar:</strong><br>
+      1. Abre <strong>script.google.com</strong> → pega el Code.gs<br>
+      2. <strong>Implementar</strong> → Web app → Ejecutar como: <em>Yo</em><br>
+      3. Quién tiene acceso: <strong>Cualquier usuario (incluso anónimo)</strong><br>
+      4. Copia la URL y pégala arriba<br>
+      5. Presiona <strong>⬆️ Subir a nube</strong> desde la PC<br>
+      6. En el celular presiona <strong>⬇️ Actualizar</strong>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- URL MODAL -->
+<div class="modal-bg" id="urlModal">
+  <div class="modal">
+    <h3>🔗 Configurar URL del Apps Script</h3>
+    <div class="field">
+      <label>URL del Web App</label>
+      <input type="url" id="modalUrlInput"
+             placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeUrlModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveApiUrlFromModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTES
+═══════════════════════════════════════════════════════════════ */
+const SUBJECTS  = ['Lenguajes','Saberes','Ética','Humano'];
+const CRITERIA  = ['tareas','trabajos','disciplina','examen'];
+const CRIT_LABELS = { tareas:'Tareas', trabajos:'Trabajos',
+                      disciplina:'Disciplina', examen:'Examen' };
+const DEF_W     = { tareas:20, trabajos:20, disciplina:20, examen:40 };
+const USERS_KEY = 'calif_users';
+const SESSION_KEY = 'calif_session';
+const API_URL_KEY = 'calif_api_url';
+
+/* ═══════════════════════════════════════════════════════════════
+   ESTADO
+═══════════════════════════════════════════════════════════════ */
+let STATE = {
+  config:   { schoolName:'', year:'', grade:'', group:'', bimestres:5 },
+  students: [],    // [{id,name}]
+  weights:  {},    // {'Lenguajes_1':{tareas,trabajos,disciplina,examen}}
+  raw:      {},    // {'studentId_Lenguajes_1':{t_ent,t_tot,w_ent,w_tot,disc,e_ent,e_tot}}
+  logo:     null,
 };
 
-const TH = {padding:"10px 8px",textAlign:"center",fontSize:12,color:"#8080b0",fontWeight:700,borderBottom:"2px solid #2d2d4e"};
-const TD = {padding:"8px 8px",textAlign:"center",fontSize:13,color:"#d0d0e8"};
+let currentUser   = null;
+let curSubject    = SUBJECTS[0];
+let curBim        = 1;
+let isSyncing     = false;
+let syncIntervalId = null;
 
-/* ── TABS ────────────────────────────────────────────────────── */
-const TABS = [
-  {id:"config",    label:"⚙️ Configuración"},
-  {id:"alumnos",   label:"👥 Alumnos"},
-  {id:"califs",    label:"✏️ Calificaciones"},
-  {id:"pesos",     label:"⚖️ Porcentajes"},
-  {id:"reportes",  label:"📊 Reportes"},
-  {id:"sync",      label:"☁️ Sincronizar"},
-];
+/* ═══════════════════════════════════════════════════════════════
+   PERSISTENCIA LOCAL  (igual que el hotel: localStorage)
+═══════════════════════════════════════════════════════════════ */
+function lsGet(k, def=null) {
+  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
+  catch(e) { return def; }
+}
+function lsSet(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){}
+}
+function lsDel(k) { try { localStorage.removeItem(k); } catch(e){} }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  LOGIN SCREEN                                                  */
-/* ══════════════════════════════════════════════════════════════ */
-function LoginScreen({ onLogin, schoolLogo, schoolName }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [error,    setError]    = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [shake,    setShake]    = useState(false);
-
-  const getUsers = () => LS.get("sys_users") || DEFAULT_USERS;
-
-  const doLogin = () => {
-    if (!username.trim() || !password.trim()) { triggerError("Ingresa tu usuario y contraseña"); return; }
-    setLoading(true);
-    setTimeout(() => {
-      const users = getUsers();
-      const user  = users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
-      if (!user || !user.active) { setLoading(false); triggerError("Usuario no encontrado o inactivo"); return; }
-      if (user.passHash !== hashStr(password)) { setLoading(false); triggerError("Contraseña incorrecta"); return; }
-      // Guardar sesión
-      LS.set("session", { userId: user.id, username: user.username, name: user.name, role: user.role, loginAt: Date.now() });
-      onLogin({ userId: user.id, username: user.username, name: user.name, role: user.role });
-    }, 700);
-  };
-
-  const triggerError = (msg) => { setError(msg); setShake(true); setTimeout(()=>setShake(false), 500); };
-
-  const stars = Array.from({length:12},(_,i)=>i);
-
-  return (
-    <div style={{minHeight:"100vh",background:"#0d0d1a",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden",padding:16}}>
-      {/* Fondo decorativo */}
-      <div style={{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none"}}>
-        {/* Orbes */}
-        <div style={{position:"absolute",top:"-10%",left:"-5%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,#4361ee18 0%,transparent 70%)"}}/>
-        <div style={{position:"absolute",bottom:"-10%",right:"-5%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,#cc5de818 0%,transparent 70%)"}}/>
-        <div style={{position:"absolute",top:"40%",right:"10%",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,#4dabf710 0%,transparent 70%)"}}/>
-        {/* Grid */}
-        <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
-        {/* Floating stars */}
-        {stars.map(i=>(
-          <div key={i} style={{
-            position:"absolute",
-            left:`${8+i*7}%`, top:`${15+((i*37)%70)}%`,
-            width: i%3===0?3:2, height: i%3===0?3:2,
-            borderRadius:"50%", background:"#ffffff",
-            opacity: 0,
-            animation:`starFloat ${3+i*0.4}s ease-in-out ${i*0.3}s infinite`,
-          }}/>
-        ))}
-      </div>
-
-      {/* Card */}
-      <div className="login-wrap" style={{
-        width:"100%", maxWidth:420, position:"relative", zIndex:1,
-      }}>
-        {/* Logo / Foto de escuela */}
-        <div style={{textAlign:"center",marginBottom:28}}>
-          {schoolLogo ? (
-            <div style={{display:"inline-block",marginBottom:14}}>
-              <img src={schoolLogo} alt="Logo escuela"
-                style={{width:96,height:96,borderRadius:20,objectFit:"cover",
-                  border:"2px solid #4361ee44",
-                  boxShadow:"0 0 32px #4361ee30"}}/>
-            </div>
-          ) : (
-            <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
-              width:80,height:80,borderRadius:20,
-              background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
-              border:"2px solid #4361ee44",
-              boxShadow:"0 0 32px #4361ee30",
-              fontSize:38,marginBottom:14}}>🏫</div>
-          )}
-          <div style={{fontSize:22,fontWeight:800,color:"#e8e8f0",letterSpacing:.5}}>
-            {schoolName || "Sistema de Calificaciones"}
-          </div>
-          <div style={{fontSize:13,color:"#6060a0",marginTop:4}}>Accede con tu cuenta institucional</div>
-        </div>
-
-        {/* Form card */}
-        <div className={shake?"shake-anim":""} style={{
-          background:"#12122a",
-          border:"1px solid #2d2d4e",
-          borderRadius:16,
-          padding:32,
-          boxShadow:"0 20px 60px #00000060",
-        }}>
-          {/* Usuario */}
-          <div style={{marginBottom:16}}>
-            <label style={{fontSize:12,color:"#8080b0",fontWeight:600,display:"block",marginBottom:6,letterSpacing:.5}}>USUARIO</label>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:16}}>👤</span>
-              <input
-                type="text" value={username}
-                onChange={e=>{setUsername(e.target.value);setError("");}}
-                onKeyDown={e=>e.key==="Enter"&&doLogin()}
-                placeholder="Nombre de usuario"
-                style={{width:"100%",background:"#1a1a2e",border:`1px solid ${error?"#ff6b6b66":"#2d2d4e"}`,
-                  borderRadius:8,color:"#e8e8f0",padding:"10px 12px 10px 38px",fontSize:14,transition:"border-color .2s"}}
-              />
-            </div>
-          </div>
-
-          {/* Contraseña */}
-          <div style={{marginBottom:20}}>
-            <label style={{fontSize:12,color:"#8080b0",fontWeight:600,display:"block",marginBottom:6,letterSpacing:.5}}>CONTRASEÑA</label>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:16}}>🔒</span>
-              <input
-                type={showPass?"text":"password"} value={password}
-                onChange={e=>{setPassword(e.target.value);setError("");}}
-                onKeyDown={e=>e.key==="Enter"&&doLogin()}
-                placeholder="••••••••"
-                style={{width:"100%",background:"#1a1a2e",border:`1px solid ${error?"#ff6b6b66":"#2d2d4e"}`,
-                  borderRadius:8,color:"#e8e8f0",padding:"10px 38px 10px 38px",fontSize:14,transition:"border-color .2s"}}
-              />
-              <button onClick={()=>setShowPass(p=>!p)}
-                style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
-                  background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#7070a0",padding:4}}>
-                {showPass?"🙈":"👁️"}
-              </button>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{background:"#ff6b6b15",border:"1px solid #ff6b6b44",borderRadius:8,
-              padding:"8px 12px",marginBottom:16,fontSize:13,color:"#ff6b6b",display:"flex",gap:8,alignItems:"center"}}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          {/* Botón */}
-          <button onClick={doLogin} disabled={loading}
-            style={{width:"100%",background:"linear-gradient(135deg,#4361ee,#7048c8)",
-              color:"#fff",border:"none",borderRadius:8,padding:"12px",fontSize:15,fontWeight:700,
-              cursor:loading?"not-allowed":"pointer",opacity:loading?0.7:1,
-              boxShadow:"0 4px 20px #4361ee44",transition:"opacity .2s",letterSpacing:.3}}>
-            {loading ? (
-              <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                <span style={{display:"inline-block",width:16,height:16,border:"2px solid #ffffff60",
-                  borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-                Verificando...
-              </span>
-            ) : "Iniciar Sesión →"}
-          </button>
-        </div>
-
-        {/* Perfiles hint */}
-        <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-          {[{role:"docente",icon:"👩‍🏫",label:"Docente"},{role:"masteradmin",icon:"🛡️",label:"Master Admin"}].map(p=>(
-            <div key={p.role} style={{
-              background:"#12122a",border:`1px solid ${ROLE_COLORS[p.role]}33`,borderRadius:8,
-              padding:"6px 14px",fontSize:12,color:ROLE_COLORS[p.role],display:"flex",alignItems:"center",gap:6
-            }}>{p.icon} {p.label}</div>
-          ))}
-        </div>
-
-        <div style={{textAlign:"center",marginTop:16,fontSize:11,color:"#3d3d60"}}>
-          Sistema de Calificaciones Escolar · Acceso restringido
-        </div>
-
-        {/* Cache refresh button */}
-        <div style={{textAlign:"center",marginTop:12}}>
-          <button onClick={async()=>{
-            try {
-              // 1. Backup ALL data to sessionStorage before clearing anything
-              const keys = ["cfg","stu","wts","grd","tot","sys_users"];
-              const backup = {};
-              keys.forEach(k=>{ const v=localStorage.getItem(k); if(v) backup[k]=v; });
-              sessionStorage.setItem("__data_backup__", JSON.stringify(backup));
-
-              // 2. Clear SW caches (NOT localStorage)
-              if("caches" in window){
-                const cacheKeys = await caches.keys();
-                await Promise.all(cacheKeys.map(k=>caches.delete(k)));
-              }
-              // 3. Unregister service workers
-              if("serviceWorker" in navigator){
-                const regs = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(regs.map(r=>r.unregister()));
-              }
-              // 4. Hard reload — data stays in localStorage + sessionStorage backup
-              window.location.reload(true);
-            } catch(e){ window.location.reload(true); }
-          }} style={{
-            background:"none",border:"1px solid #2d2d4e",borderRadius:6,
-            color:"#5050a0",fontSize:11,padding:"5px 14px",cursor:"pointer",
-            display:"inline-flex",alignItems:"center",gap:6,transition:"all .2s"
-          }}
-          onMouseOver={e=>{e.currentTarget.style.borderColor="#4361ee66";e.currentTarget.style.color="#8080c0";}}
-          onMouseOut={e=>{e.currentTarget.style.borderColor="#2d2d4e";e.currentTarget.style.color="#5050a0";}}>
-            🔄 Actualizar caché
-          </button>
-          <div style={{fontSize:10,color:"#3d3d60",marginTop:5}}>Los datos guardados no se borran</div>
-        </div>
-      </div>
-    </div>
-  );
+function loadLocal() {
+  STATE.config   = lsGet('calif_config',   STATE.config);
+  STATE.students = lsGet('calif_students', []);
+  STATE.weights  = lsGet('calif_weights',  {});
+  STATE.raw      = lsGet('calif_raw',      {});
+  try { STATE.logo = localStorage.getItem('calif_logo') || null; } catch(e){}
+}
+function saveLocal() {
+  lsSet('calif_config',   STATE.config);
+  lsSet('calif_students', STATE.students);
+  lsSet('calif_weights',  STATE.weights);
+  lsSet('calif_raw',      STATE.raw);
+  try { if (STATE.logo) localStorage.setItem('calif_logo', STATE.logo);
+        else localStorage.removeItem('calif_logo'); } catch(e){}
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  ROOT APP                                                      */
-/* ══════════════════════════════════════════════════════════════ */
-function App() {
-  const [session, setSession] = useState(() => {
-    const s = LS.get("session");
-    if (!s) return null;
-    if (Date.now() - s.loginAt > 12*60*60*1000) { LS.set("session",null); return null; }
-    return s;
+/* ═══════════════════════════════════════════════════════════════
+   API  —  IDÉNTICO AL HOTEL SHERATON
+   GET  → cargar datos     (igual que apiGet del hotel)
+   POST → guardar datos    (igual que apiPost del hotel en login)
+═══════════════════════════════════════════════════════════════ */
+function getApiUrl() { return localStorage.getItem(API_URL_KEY) || ''; }
+
+// GET  — igual que apiGet del hotel
+function apiGet(action, params={}) {
+  params.action = action;
+  const qs  = new URLSearchParams(params).toString();
+  const url = getApiUrl();
+  return fetch(`${url}?${qs}`);
+}
+
+// POST text/plain — igual que apiPost del hotel (login)
+function apiPost(data) {
+  const url = getApiUrl();
+  return fetch(url, {
+    method:  'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify(data)
+  });
+}
+
+/* ─── PULL: Descargar datos de la nube ──────────────────────── */
+async function doSync() {
+  const url = getApiUrl();
+  if (!url) { showToast('Configura primero la URL del Apps Script','warning'); return; }
+  if (isSyncing) return;
+  isSyncing = true;
+  setSyncUI('syncing');
+  try {
+    const res    = await apiGet('load');
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || 'Error al cargar');
+
+    if (result.config)   { STATE.config   = result.config;   lsSet('calif_config',   result.config); }
+    if (result.students) { STATE.students = result.students; lsSet('calif_students', result.students); }
+    if (result.weights)  { STATE.weights  = result.weights;  lsSet('calif_weights',  result.weights); }
+    if (result.raw)      { STATE.raw      = result.raw;      lsSet('calif_raw',      result.raw); }
+    if (result.logo !== undefined) {
+      STATE.logo = result.logo;
+      try { if (result.logo) localStorage.setItem('calif_logo', result.logo);
+            else localStorage.removeItem('calif_logo'); } catch(e){}
+    }
+    setSyncUI('ok');
+    updateHeader();
+    refreshCurrentTab();
+    showToast('☁️ Datos actualizados correctamente', 'success');
+  } catch(err) {
+    console.error('Sync error:', err);
+    setSyncUI('err');
+    showToast('Error al sincronizar: ' + err.message, 'error');
+  } finally { isSyncing = false; }
+}
+
+/* ─── PUSH: Subir datos a la nube ───────────────────────────── */
+async function doUpload(withLogo=false) {
+  const url = getApiUrl();
+  if (!url) { showToast('Configura primero la URL del Apps Script','warning'); return; }
+  setSyncUI('syncing');
+  try {
+    const payload = {
+      action:   'save',
+      config:   STATE.config,
+      students: STATE.students,
+      weights:  STATE.weights,
+      raw:      STATE.raw,
+    };
+    if (withLogo) payload.logo = STATE.logo;
+
+    // POST text/plain — igual que el login del hotel
+    const res    = await apiPost(payload);
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || 'Error al guardar');
+
+    const now = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    lsSet('calif_last_sync', now);
+    setSyncUI('ok');
+    showToast('☁️ Datos guardados en la nube ✓', 'success');
+  } catch(err) {
+    console.error('Upload error:', err);
+    setSyncUI('err');
+    showToast('Error al subir datos: ' + err.message, 'error');
+  }
+}
+
+function setSyncUI(status) {
+  const dot  = document.getElementById('syncDot');
+  const icon = document.getElementById('syncIcon');
+  const txt  = document.getElementById('syncStatusText');
+  const last = lsGet('calif_last_sync', '–');
+  document.getElementById('syncLastTime').textContent = last !== '–' ? 'Última sync: ' + last : '–';
+  dot.className  = 'sync-dot ' + status;
+  if (status === 'ok') {
+    icon.textContent = '✅'; txt.textContent = 'Conectado — Datos sincronizados';
+  } else if (status === 'syncing') {
+    icon.textContent = '⏳'; txt.textContent = 'Sincronizando...';
+  } else if (status === 'err') {
+    icon.textContent = '❌'; txt.textContent = 'Error de conexión';
+  } else {
+    icon.textContent = '⚪'; txt.textContent = 'Sin configurar';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTENTICACIÓN  (igual que el hotel — localStorage + hash)
+═══════════════════════════════════════════════════════════════ */
+function djb2(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) | 0;
+  return h.toString(16);
+}
+function getUsers() {
+  const def = [
+    { username:'karlamarrufo', hash: djb2('Karla2026'), role:'teacher', display:'Karla Marrufo' },
+    { username:'admin',        hash: djb2('Admin2026'), role:'admin',   display:'Administrador' },
+  ];
+  return lsGet(USERS_KEY, def);
+}
+
+function doLogin() {
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const err  = document.getElementById('loginErr');
+  const btn  = document.getElementById('loginBtn');
+  err.classList.remove('show');
+  btn.disabled = true; btn.textContent = 'Verificando...';
+
+  const users = getUsers();
+  const found = users.find(u => u.username === user && u.hash === djb2(pass));
+
+  if (found) {
+    currentUser = { username: found.username, role: found.role,
+                    display: found.display, ts: Date.now() };
+    lsSet(SESSION_KEY, currentUser);
+    document.getElementById('loginScreen').classList.add('hidden');
+    onAppStart();
+  } else {
+    err.textContent = 'Usuario o contraseña incorrectos';
+    err.classList.add('show');
+  }
+  btn.disabled = false; btn.textContent = 'Entrar';
+}
+
+function doLogout() {
+  lsDel(SESSION_KEY);
+  currentUser = null;
+  if (syncIntervalId) clearInterval(syncIntervalId);
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+function checkSession() {
+  const s = lsGet(SESSION_KEY, null);
+  // Session expires after 12 hours
+  if (s && (Date.now() - s.ts) < 12 * 3600000) {
+    currentUser = s;
+    return true;
+  }
+  lsDel(SESSION_KEY);
+  return false;
+}
+
+function changePassword() {
+  const old  = document.getElementById('pwdOld').value;
+  const nw   = document.getElementById('pwdNew').value;
+  const conf = document.getElementById('pwdConf').value;
+  if (!old || !nw) { showToast('Completa todos los campos','warning'); return; }
+  if (nw !== conf) { showToast('Las contraseñas no coinciden','error'); return; }
+  const users = getUsers();
+  const idx   = users.findIndex(u => u.username === currentUser.username);
+  if (idx < 0 || users[idx].hash !== djb2(old)) {
+    showToast('Contraseña actual incorrecta','error'); return;
+  }
+  users[idx].hash = djb2(nw);
+  lsSet(USERS_KEY, users);
+  document.getElementById('pwdOld').value = '';
+  document.getElementById('pwdNew').value = '';
+  document.getElementById('pwdConf').value = '';
+  showToast('✅ Contraseña actualizada','success');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   APP INIT
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadLocal();
+  if (checkSession()) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    onAppStart();
+  } else {
+    updateLoginScreen();
+  }
+});
+
+function updateLoginScreen() {
+  const url = getApiUrl();
+  const info = document.getElementById('loginUrlInfo');
+  if (url) {
+    info.textContent = '🔗 Conectado: ' + url.slice(0,50) + '…';
+    info.className = 'login-url';
+  } else {
+    info.textContent = '⚠️ Sin conexión configurada — toca para configurar';
+    info.className = 'login-url no-url';
+  }
+  if (STATE.logo) {
+    document.getElementById('loginLogo').src = STATE.logo;
+    document.getElementById('loginLogo').style.display = 'block';
+    document.getElementById('loginLogoPlaceholder').style.display = 'none';
+    document.getElementById('loginTitle').textContent =
+      STATE.config.schoolName || 'Sistema de Calificaciones';
+    document.getElementById('loginSubtitle').textContent =
+      [STATE.config.grade, STATE.config.group, STATE.config.year].filter(Boolean).join(' · ') || 'Inicia sesión para continuar';
+  }
+}
+
+function onAppStart() {
+  updateHeader();
+  buildSubjectTabs();
+  buildBimTabs();
+  renderWeightRow();
+  renderStudents();
+  renderGradesTable();
+  renderReport();
+  updateConfigForm();
+  updateSyncTab();
+  setSyncUI(getApiUrl() ? 'ok' : 'idle');
+
+  // Auto-sync al iniciar (igual que el hotel)
+  if (getApiUrl()) {
+    doSync();
+    if (syncIntervalId) clearInterval(syncIntervalId);
+    syncIntervalId = setInterval(() => doSync(), 60000); // cada minuto
+  }
+}
+
+function updateHeader() {
+  const cfg = STATE.config;
+  document.getElementById('hdrTitle').textContent =
+    cfg.schoolName || 'Sistema de Calificaciones';
+  document.getElementById('hdrSub').textContent =
+    [cfg.grade && cfg.grade + (cfg.group ? ' ' + cfg.group : ''), cfg.year]
+      .filter(Boolean).join(' · ') || '–';
+  if (STATE.logo) {
+    const box = document.getElementById('hdrLogoBox');
+    box.innerHTML = `<img src="${STATE.logo}" class="hdr-logo">`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════════════ */
+function goTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if (id === 'grades')  renderGradesTable();
+  if (id === 'reports') renderReport();
+  if (id === 'sync')    updateSyncTab();
+}
+
+function refreshCurrentTab() {
+  const active = document.querySelector('.nav-btn.active');
+  if (active) {
+    const id = active.id.replace('nav-','');
+    goTab(id);
+  }
+  updateHeader();
+  updateConfigForm();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG TAB
+═══════════════════════════════════════════════════════════════ */
+function updateConfigForm() {
+  const c = STATE.config;
+  document.getElementById('cfgSchool').value = c.schoolName || '';
+  document.getElementById('cfgYear').value   = c.year || '';
+  document.getElementById('cfgGrade').value  = c.grade || '';
+  document.getElementById('cfgGroup').value  = c.group || '';
+  document.getElementById('cfgBim').value    = String(c.bimestres || 5);
+  if (STATE.logo) {
+    document.getElementById('logoPreview').src = STATE.logo;
+    document.getElementById('logoPreview').style.display = 'block';
+    document.getElementById('logoPlaceholder').style.display = 'none';
+  } else {
+    document.getElementById('logoPreview').style.display = 'none';
+    document.getElementById('logoPlaceholder').style.display = 'flex';
+  }
+}
+
+function saveConfig() {
+  STATE.config = {
+    schoolName: document.getElementById('cfgSchool').value.trim(),
+    year:       document.getElementById('cfgYear').value.trim(),
+    grade:      document.getElementById('cfgGrade').value.trim(),
+    group:      document.getElementById('cfgGroup').value.trim(),
+    bimestres:  parseInt(document.getElementById('cfgBim').value) || 5,
+  };
+  saveLocal();
+  updateHeader();
+  buildBimTabs();
+  showToast('✅ Configuración guardada','success');
+}
+
+function loadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('Imagen muy grande (máx 2MB)','error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    STATE.logo = e.target.result;
+    saveLocal();
+    updateConfigForm();
+    updateHeader();
+    showToast('✅ Logo guardado','success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearLogo() {
+  STATE.logo = null;
+  saveLocal();
+  updateConfigForm();
+  updateHeader();
+  showToast('Logo eliminado','warning');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STUDENTS TAB
+═══════════════════════════════════════════════════════════════ */
+function renderStudents() {
+  const tbody = document.getElementById('studentsTbody');
+  document.getElementById('studentCount').textContent = ` (${STATE.students.length})`;
+  if (!STATE.students.length) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">Sin alumnos registrados</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = STATE.students.map((s,i) => `
+    <tr class="student-row">
+      <td style="color:var(--text3);">${i+1}</td>
+      <td>
+        <span id="sname_${s.id}">${esc(s.name)}</span>
+        <input id="sedit_${s.id}" value="${esc(s.name)}" style="display:none;"
+               onkeydown="if(event.key==='Enter')saveStudentName('${s.id}')">
+      </td>
+      <td>
+        <button class="edit-btn" onclick="toggleEditStudent('${s.id}')">✏️</button>
+        <button class="del-btn" onclick="deleteStudent('${s.id}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+function addStudent() {
+  const inp  = document.getElementById('newStudentName');
+  const name = inp.value.trim();
+  if (!name) return;
+  STATE.students.push({ id: uid(), name });
+  saveLocal();
+  inp.value = '';
+  renderStudents();
+  showToast('✅ Alumno agregado');
+}
+
+function toggleEditStudent(id) {
+  const span = document.getElementById('sname_'+id);
+  const inp  = document.getElementById('sedit_'+id);
+  if (inp.style.display === 'none') {
+    span.style.display = 'none'; inp.style.display = ''; inp.focus();
+  } else { saveStudentName(id); }
+}
+
+function saveStudentName(id) {
+  const inp  = document.getElementById('sedit_'+id);
+  const name = inp.value.trim();
+  if (!name) return;
+  const s = STATE.students.find(x => x.id === id);
+  if (s) { s.name = name; saveLocal(); renderStudents(); showToast('✅ Nombre actualizado'); }
+}
+
+function deleteStudent(id) {
+  if (!confirm('¿Eliminar este alumno? Se borrarán sus calificaciones.')) return;
+  STATE.students = STATE.students.filter(s => s.id !== id);
+  // clean grades
+  Object.keys(STATE.raw).forEach(k => { if (k.startsWith(id+'_')) delete STATE.raw[k]; });
+  saveLocal();
+  renderStudents();
+  showToast('Alumno eliminado','warning');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRADES TAB — TABS
+═══════════════════════════════════════════════════════════════ */
+function buildSubjectTabs() {
+  const el = document.getElementById('subjectTabs');
+  el.innerHTML = SUBJECTS.map(s => `
+    <button class="subject-tab${s===curSubject?' active':''}"
+            onclick="selectSubject('${s}')">${s}</button>`).join('');
+}
+
+function buildBimTabs() {
+  const n  = STATE.config.bimestres || 5;
+  const el = document.getElementById('bimTabs');
+  el.innerHTML = Array.from({length:n},(_,i)=>i+1).map(b => `
+    <button class="bim-tab${b===curBim?' active':''}"
+            onclick="selectBim(${b})">Bim ${b}</button>`).join('');
+  if (curBim > n) { curBim = 1; }
+}
+
+function selectSubject(s) {
+  curSubject = s;
+  buildSubjectTabs();
+  renderWeightRow();
+  renderGradesTable();
+}
+
+function selectBim(b) {
+  curBim = b;
+  buildBimTabs();
+  renderWeightRow();
+  renderGradesTable();
+}
+
+/* ─── Pesos ───────────────────────────────────────────────── */
+function wKey() { return `${curSubject}_${curBim}`; }
+function getWeights() { return Object.assign({}, DEF_W, STATE.weights[wKey()]); }
+
+function renderWeightRow() {
+  const w   = getWeights();
+  const sum = CRITERIA.reduce((a,c) => a + (parseFloat(w[c])||0), 0);
+  document.getElementById('weightsLabel').textContent =
+    ` — ${curSubject} · Bimestre ${curBim}`;
+  document.getElementById('weightRow').innerHTML = CRITERIA.map(c => `
+    <div class="weight-item">
+      <label>${CRIT_LABELS[c]}</label>
+      <input type="number" id="w_${c}" value="${w[c]}" min="0" max="100"
+             onchange="onWeightChange()">
+    </div>`).join('') + `
+    <div class="weight-total ${Math.abs(sum-100)<0.1?'ok':'bad'}" id="wTotal">
+      Total: ${sum}%
+    </div>`;
+}
+
+function onWeightChange() {
+  const w = {};
+  CRITERIA.forEach(c => w[c] = parseFloat(document.getElementById('w_'+c).value)||0);
+  const sum = CRITERIA.reduce((a,c) => a + w[c], 0);
+  const el  = document.getElementById('wTotal');
+  el.textContent  = 'Total: ' + sum + '%';
+  el.className    = 'weight-total ' + (Math.abs(sum-100)<0.1?'ok':'bad');
+  STATE.weights[wKey()] = w;
+  saveLocal();
+}
+
+/* ─── Tabla de captura ─────────────────────────────────────── */
+function renderGradesTable() {
+  const label = `✏️ ${curSubject} — Bimestre ${curBim}`;
+  document.getElementById('gradesLabel').textContent = label;
+
+  const head = document.getElementById('gradesHead');
+  const body = document.getElementById('gradesTbody');
+
+  if (!STATE.students.length) {
+    head.innerHTML = '';
+    body.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Agrega alumnos primero</td></tr>`;
+    return;
+  }
+
+  head.innerHTML = `<tr>
+    <th>#</th><th>Alumno</th>
+    <th title="Tareas entregadas">T.Ent</th><th title="Tareas totales">T.Tot</th>
+    <th title="Trabajos entregados">W.Ent</th><th title="Trabajos totales">W.Tot</th>
+    <th title="Disciplina (puntos sobre el peso)">Disc</th>
+    <th title="Examen aciertos">E.Ent</th><th title="Examen total reactivos">E.Tot</th>
+    <th>Calif</th>
+  </tr>`;
+
+  const w = getWeights();
+  body.innerHTML = STATE.students.map((s,i) => {
+    const k = `${s.id}_${curSubject}_${curBim}`;
+    const r = STATE.raw[k] || {};
+    const grade = calcGrade(s.id, curSubject, curBim);
+    const { lbl, cls } = gradeLabel(grade);
+    return `<tr data-sid="${s.id}">
+      <td style="color:var(--text3);">${i+1}</td>
+      <td style="font-weight:500;">${esc(s.name)}</td>
+      <td><input type="number" min="0" class="raw-in" data-f="t_ent" data-sid="${s.id}"
+          value="${r.t_ent||''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="t_tot" data-sid="${s.id}"
+          value="${r.t_tot||''}" placeholder="–"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="w_ent" data-sid="${s.id}"
+          value="${r.w_ent||''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="w_tot" data-sid="${s.id}"
+          value="${r.w_tot||''}" placeholder="–"></td>
+      <td><input type="number" min="0" max="${w.disciplina}" class="raw-in"
+          data-f="disc" data-sid="${s.id}"
+          value="${r.disc||''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="e_ent" data-sid="${s.id}"
+          value="${r.e_ent||''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="e_tot" data-sid="${s.id}"
+          value="${r.e_tot||''}" placeholder="–"></td>
+      <td class="grade-cell">
+        <span class="grade-val ${cls}">${grade > 0 ? (grade/10).toFixed(1) : '–'}</span>
+        <span style="font-size:.72rem;color:var(--text3);margin-left:3px;">${lbl}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Update grade on input change
+  document.querySelectorAll('.raw-in').forEach(inp => {
+    inp.addEventListener('input', () => updateRowGrade(inp.dataset.sid));
+  });
+}
+
+function updateRowGrade(sid) {
+  collectRowRaw(sid);
+  const grade = calcGrade(sid, curSubject, curBim);
+  const { lbl, cls } = gradeLabel(grade);
+  const row = document.querySelector(`tr[data-sid="${sid}"]`);
+  if (row) {
+    const cell = row.querySelector('.grade-cell');
+    cell.innerHTML = `<span class="grade-val ${cls}">${grade > 0 ? (grade/10).toFixed(1) : '–'}</span>
+      <span style="font-size:.72rem;color:var(--text3);margin-left:3px;">${lbl}</span>`;
+  }
+}
+
+function collectRowRaw(sid) {
+  const k = `${sid}_${curSubject}_${curBim}`;
+  const r = STATE.raw[k] || {};
+  document.querySelectorAll(`.raw-in[data-sid="${sid}"]`).forEach(inp => {
+    const v = parseFloat(inp.value);
+    r[inp.dataset.f] = isNaN(v) ? undefined : v;
+  });
+  STATE.raw[k] = r;
+}
+
+function saveGrades() {
+  STATE.students.forEach(s => collectRowRaw(s.id));
+  saveLocal();
+  renderGradesTable();
+  showToast('✅ Calificaciones guardadas');
+  // auto-upload in background
+  if (getApiUrl()) doUpload(false);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CÁLCULO DE CALIFICACIONES
+═══════════════════════════════════════════════════════════════ */
+function calcGrade(sid, subject, bim) {
+  const key = `${sid}_${subject}_${bim}`;
+  const r   = STATE.raw[key];
+  if (!r) return 0;
+  const w   = Object.assign({}, DEF_W, STATE.weights[`${subject}_${bim}`]);
+  let score = 0;
+
+  // Tareas: entregadas / totales × peso
+  if (r.t_tot > 0 && r.t_ent >= 0) score += (r.t_ent / r.t_tot) * w.tareas;
+  // Trabajos: realizados / totales × peso
+  if (r.w_tot > 0 && r.w_ent >= 0) score += (r.w_ent / r.w_tot) * w.trabajos;
+  // Disciplina: puntaje directo (sobre el peso)
+  if (r.disc >= 0) score += (r.disc || 0);
+  // Examen: aciertos / total × peso
+  if (r.e_tot > 0 && r.e_ent >= 0) score += (r.e_ent / r.e_tot) * w.examen;
+
+  return Math.min(100, Math.max(0, Math.round(score * 10) / 10));
+}
+
+function gradeLabel(score) {
+  // score is 0-100, convert to 0-10
+  const g = score / 10;
+  if (g >= 9)   return { lbl:'MB', cls:'MB' };
+  if (g >= 7)   return { lbl:'B',  cls:'B'  };
+  if (g >= 6)   return { lbl:'S',  cls:'S'  };
+  if (g > 0)    return { lbl:'NS', cls:'NS' };
+  return { lbl:'', cls:'' };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REPORTES
+═══════════════════════════════════════════════════════════════ */
+function updateReportFilters() {
+  const n = STATE.config.bimestres || 5;
+  const rSub = document.getElementById('rptSubject');
+  const rBim = document.getElementById('rptBim');
+  rSub.innerHTML = '<option value="">Todas las materias</option>' +
+    SUBJECTS.map(s=>`<option value="${s}">${s}</option>`).join('');
+  rBim.innerHTML = '<option value="">Todos los bimestres</option>' +
+    Array.from({length:n},(_,i)=>i+1)
+      .map(b=>`<option value="${b}">Bimestre ${b}</option>`).join('');
+}
+
+function renderReport() {
+  updateReportFilters();
+  const selSub = document.getElementById('rptSubject').value;
+  const selBim = document.getElementById('rptBim').value;
+  const subjects = selSub ? [selSub] : SUBJECTS;
+  const n = STATE.config.bimestres || 5;
+  const bims = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
+
+  if (!STATE.students.length) {
+    document.getElementById('rptHead').innerHTML = '';
+    document.getElementById('rptBody').innerHTML =
+      `<tr><td style="padding:20px;color:var(--text3);">Sin alumnos</td></tr>`;
+    document.getElementById('rptSummary').innerHTML = '';
+    return;
+  }
+
+  // Build header
+  const cols = [];
+  subjects.forEach(s => bims.forEach(b => cols.push({s,b,label:`${s} B${b}`})));
+
+  document.getElementById('rptHead').innerHTML = `<tr>
+    <th>#</th><th>Alumno</th>
+    ${cols.map(c=>`<th>${c.label}</th>`).join('')}
+    <th>Promedio</th>
+  </tr>`;
+
+  // Distribution counters
+  let dist = {MB:0, B:0, S:0, NS:0, total:0};
+
+  const rows = STATE.students.map((stu, i) => {
+    const grades = cols.map(c => calcGrade(stu.id, c.s, c.b));
+    const valid  = grades.filter(g => g > 0);
+    const avg    = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 0;
+    const { lbl:avgLbl, cls:avgCls } = gradeLabel(avg);
+    if (avgLbl) { dist[avgLbl]++; dist.total++; }
+    return `<tr>
+      <td style="color:var(--text3);">${i+1}</td>
+      <td>${esc(stu.name)}</td>
+      ${grades.map(g => {
+        const {lbl,cls} = gradeLabel(g);
+        return `<td class="grade-cell">
+          <span class="grade-val ${cls}">${g>0?(g/10).toFixed(1):'–'}</span>
+          ${lbl?`<span style="font-size:.7rem;color:var(--text3);"> ${lbl}</span>`:''}
+        </td>`;
+      }).join('')}
+      <td class="grade-cell">
+        <span class="grade-val ${avgCls}">${avg>0?(avg/10).toFixed(1):'–'}</span>
+        ${avgLbl?`<span style="font-size:.7rem;color:var(--text3);"> ${avgLbl}</span>`:''}
+      </td>
+    </tr>`;
   });
 
-  const [tab,   setTab]   = useState(null);
-  const [toast, setToast] = useState(null);
+  document.getElementById('rptBody').innerHTML = rows.join('');
 
-  const [config,     setConfig]     = useState(() => LS.get("cfg") || {year:new Date().getFullYear().toString(),grade:"1°",group:"A",numBimestres:5,schoolName:"Mi Escuela"});
-  const [students,   setStudents]   = useState(() => LS.get("stu") || []);
-  const [weights,    setWeights]    = useState(() => LS.get("wts") || {});
-  const [grades,     setGrades]     = useState(() => LS.get("grd") || {});
-  const [totals,     setTotals]     = useState(() => LS.get("tot") || {});
-  const [rawGrades,  setRawGrades]  = useState(() => LS.get("raw") || {});
-  const [schoolLogo, setSchoolLogo] = useState(() => localStorage.getItem("logo") || null);
-
-  const [syncStatus, setSyncStatus] = useState("idle"); // idle|syncing|ok|err
-  const [lastSync,   setLastSync]   = useState(() => LS.get("last_sync") || null);
-
-  const pushTimer = useRef(null);
-  const pollTimer = useRef(null);
-  const pushing   = useRef(false);
-
-  const isAdmin = session?.role === "masteradmin";
-  const TABS    = isAdmin ? TABS_ADMIN : TABS_DOCENTE;
-  const gasUrl  = GAS_URL;
-
-  const showToast = (msg, type="ok") => {
-    setToast({msg,type});
-    setTimeout(()=>setToast(null),2400);
-  };
-
-  /* ─── Estado reactivo para push ───────────────────────────── */
-  const stateRef = useRef({});
-  useEffect(() => {
-    stateRef.current = { config, students, weights, grades, totals, rawGrades, schoolLogo };
-  }, [config, students, weights, grades, totals, rawGrades, schoolLogo]);
-
-  /* ─── GAS API ──────────────────────────────────────────────────
-     IDÉNTICO AL HOTEL SHERATON:
-     - Todo por POST Content-Type:text/plain (sin preflight CORS)
-     - doPost en GAS redirige a doGet asignando body a e.parameter
-     - Responde con ContentService JSON → CORS automático de Google
-  ─────────────────────────────────────────────────────────────── */
-
-  /* PULL — GET ?action=load  (URL corta, sin CORS)
-     PUSH — POST con Content-Type:text/plain
-             GAS hace: e.parameter = JSON.parse(body) → doGet(e)
-             text/plain = simple request = sin preflight = sin CORS
-             La respuesta final de GAS siempre tiene CORS headers    */
-
-  const gasPull = async (silent=false) => {
-    if (!gasUrl) return;
-    setSyncStatus("syncing");
-    try {
-      const res = await fetch(`${gasUrl}?action=load`);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const d = await res.json();
-      if (!d.ok) throw new Error(d.error || "Error al cargar");
-
-      const apply = (setter, lsKey, val) => {
-        if (val === undefined || val === null) return;
-        setter(val); LS.set(lsKey, val);
-      };
-      apply(setConfig,    "cfg", d.config);
-      apply(setStudents,  "stu", d.students);
-      apply(setWeights,   "wts", d.weights);
-      apply(setGrades,    "grd", d.grades);
-      apply(setTotals,    "tot", d.totals);
-      apply(setRawGrades, "raw", d.rawGrades);
-      if (d.logo !== undefined) {
-        setSchoolLogo(d.logo);
-        try{ if(d.logo) localStorage.setItem("logo",d.logo);
-             else localStorage.removeItem("logo"); }catch{}
-      }
-      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
-      setLastSync(now); LS.set("last_sync", now);
-      setSyncStatus("ok");
-      if (!silent) showToast("☁️ Datos actualizados ✓");
-      setTimeout(()=>setSyncStatus("idle"),3000);
-    } catch(e) {
-      setSyncStatus("err");
-      if (!silent) showToast("Error al obtener datos: "+e.message,"err");
-      setTimeout(()=>setSyncStatus("idle"),5000);
-    }
-  };
-
-  const gasPush = async (silent=false, withLogo=false) => {
-    if (!gasUrl || pushing.current) return;
-    pushing.current = true;
-    setSyncStatus("syncing");
-    try {
-      const { config:c, students:s, weights:w, grades:g,
-              totals:t, rawGrades:r, schoolLogo:l } = stateRef.current;
-
-      const payload = {
-        action:"save",
-        config:c, students:s, weights:w,
-        grades:g, totals:t, rawGrades:r,
-      };
-      if (withLogo && l) payload.logo = l;
-
-      // POST text/plain → sin preflight CORS → GAS puede leer y responder
-      const res = await fetch(gasUrl, {
-        method:  "POST",
-        headers: { "Content-Type": "text/plain" },
-        body:    JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const d = await res.json();
-      if (!d.ok) throw new Error(d.error || "Error al guardar");
-
-      const now = new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
-      setLastSync(now); LS.set("last_sync", now);
-      setSyncStatus("ok");
-      if (!silent) showToast("☁️ Guardado en la nube ✓");
-      setTimeout(()=>setSyncStatus("idle"),3000);
-    } catch(e) {
-      setSyncStatus("err");
-      if (!silent) showToast("Error al guardar: "+e.message,"err");
-      setTimeout(()=>setSyncStatus("idle"),5000);
-    }
-    pushing.current = false;
-  };
-
-  /* Push diferido 10 seg tras el último cambio */
-  const schedulePush = () => {
-    if (!gasUrl) return;
-    clearTimeout(pushTimer.current);
-    pushTimer.current = setTimeout(()=>gasPush(true, false), 10000);
-  };
-
-  /* ─── Save helpers ─────────────────────────────────────────── */
-  const saveConfig    = c => { setConfig(c);    LS.set("cfg",c);  schedulePush(); };
-  const saveStudents  = s => { setStudents(s);  LS.set("stu",s);  schedulePush(); };
-  const saveWeights   = w => { setWeights(w);   LS.set("wts",w);  schedulePush(); };
-  const saveGrades    = g => { setGrades(g);    LS.set("grd",g);  schedulePush(); };
-  const saveTotals    = t => { setTotals(t);    LS.set("tot",t);  schedulePush(); };
-  const saveRawGrades = r => { setRawGrades(r); LS.set("raw",r);  schedulePush(); };
-  const saveLogo      = b64 => {
-    setSchoolLogo(b64);
-    try{ if(b64) localStorage.setItem("logo",b64); else localStorage.removeItem("logo"); }catch{}
-    schedulePush();
-  };
-
-  /* Al iniciar sesión → pull automático */
-  useEffect(() => {
-    if (session && !tab) {
-      setTab(isAdmin ? "config" : "califs");
-      if (gasUrl) setTimeout(()=>gasPull(true), 800);
-    }
-  }, [session]);
-
-  /* Polling cada 2 minutos */
-  useEffect(() => {
-    if (!session || !gasUrl) return;
-    pollTimer.current = setInterval(()=>gasPull(true), 2*60*1000);
-    return ()=>clearInterval(pollTimer.current);
-  }, [session, gasUrl]);
-
-  const logout = () => {
-    clearTimeout(pushTimer.current);
-    clearInterval(pollTimer.current);
-    LS.set("session", null);
-    setSession(null); setTab(null);
-    showToast("Sesión cerrada ✓");
-  };
-
-  if (!session) return <LoginScreen onLogin={s=>setSession(s)} schoolLogo={schoolLogo} schoolName={config.schoolName}/>;
-
-  const roleColor = ROLE_COLORS[session.role] || "#4361ee";
-  const roleIcon  = ROLE_ICONS[session.role]  || "👤";
-
-  const syncDot = !gasUrl ? null
-    : syncStatus==="syncing" ? {color:"#ffd43b",icon:"⏳",label:"Sync..."}
-    : syncStatus==="ok"     ? {color:"#51cf66",icon:"☁️",label:lastSync||"OK"}
-    : syncStatus==="err"    ? {color:"#ff6b6b",icon:"⚠️",label:"Error"}
-    :                         {color:"#4361ee",icon:"☁️",label:lastSync||"Conectado"};
-
-  return (
-    <div style={{minHeight:"100vh"}}>
-      {/* Header */}
-      <div className="app-header" style={{background:"linear-gradient(135deg,#1a1a3e,#0f0f2d)",borderBottom:"1px solid #2d2d4e",padding:"10px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-        {schoolLogo
-          ? <img src={schoolLogo} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"1px solid #4361ee44"}}/>
-          : <span style={{fontSize:26}}>🏫</span>}
-        <div>
-          <div style={{fontSize:16,fontWeight:700}}>{config.schoolName||"Sistema de Calificaciones"}</div>
-          <div style={{fontSize:11,color:"#7070a0"}}>{config.year} · {config.grade} · Grupo {config.group}</div>
-        </div>
-        <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          {/* Indicador sync — silencioso, solo muestra estado */}
-          {syncDot && (
-            <div title={`Sincronización automática · ${syncDot.label}`}
-              style={{display:"flex",alignItems:"center",gap:5,background:"#1a1a2e",
-                border:`1px solid ${syncDot.color}33`,borderRadius:20,padding:"4px 10px",cursor:"default"}}>
-              <span style={{fontSize:12}}>{syncDot.icon}</span>
-              <span style={{fontSize:11,color:syncDot.color,fontWeight:600}}>{syncDot.label}</span>
-              <span style={{width:6,height:6,borderRadius:"50%",background:syncDot.color,
-                animation:syncStatus==="syncing"?"pulse 1s infinite":undefined}}/>
-            </div>
-          )}
-          {/* User badge */}
-          <div style={{display:"flex",alignItems:"center",gap:8,background:"#1a1a2e",border:`1px solid ${roleColor}33`,borderRadius:20,padding:"5px 12px"}}>
-            <span style={{fontSize:14}}>{roleIcon}</span>
-            <div>
-              <div style={{fontSize:12,fontWeight:700,color:"#e8e8f0",lineHeight:1.2}}>{session.name}</div>
-              <div style={{fontSize:10,color:roleColor,fontWeight:600}}>{ROLE_LABELS[session.role]}</div>
-            </div>
-          </div>
-          <button onClick={logout} title="Cerrar sesión"
-            style={{background:"#ff6b6b15",border:"1px solid #ff6b6b33",borderRadius:8,color:"#ff6b6b",padding:"6px 10px",fontSize:12,cursor:"pointer",fontWeight:600}}>
-            🚪
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="tab-bar" style={{display:"flex",background:"#12122a",borderBottom:"1px solid #2d2d4e",overflowX:"auto"}}>
-        {TABS.map(t=>{
-          const match = t.label.match(/^(\S+)\s(.+)$/);
-          return (
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{
-              padding:"12px 16px",fontSize:13,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap",
-              background:"none",border:"none",display:"flex",alignItems:"center",gap:4,
-              borderBottom:tab===t.id?"2px solid #4361ee":"2px solid transparent",
-              color:tab===t.id?"#4361ee":"#7070a0",transition:"all .15s"}}>
-              <span className="tab-emoji">{match?.[1]||t.label}</span>
-              <span className="tab-text">{match?.[2]||""}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Content */}
-      <div className="main-content" style={{padding:20,maxWidth:1100,margin:"0 auto"}}>
-        {tab==="config"   && <TabConfig   config={config} onSave={saveConfig} schoolLogo={schoolLogo} onSaveLogo={saveLogo} showToast={showToast}/>}
-        {tab==="alumnos"  && <TabAlumnos  students={students} onSave={saveStudents} showToast={showToast}/>}
-        {tab==="califs"   && <TabCalifs   config={config} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} onSave={saveGrades} onSaveRaw={saveRawGrades} showToast={showToast}/>}
-        {tab==="pesos"    && <TabPesos    config={config} weights={weights} totals={totals} onSave={saveWeights} onSaveTotals={saveTotals} showToast={showToast}/>}
-        {tab==="aciertos" && <TabAciertos config={config} totals={totals} weights={weights} onSaveTotals={saveTotals} showToast={showToast}/>}
-        {tab==="reportes" && <TabReportes config={config} students={students} grades={grades} weights={weights} schoolLogo={schoolLogo}/>}
-        {tab==="sync"     && isAdmin && <TabSync syncStatus={syncStatus} lastSync={lastSync} onPull={()=>gasPull(false)} onPush={()=>gasPush(false, true)} students={students} grades={grades} weights={weights} totals={totals} rawGrades={rawGrades} schoolLogo={schoolLogo}/>}
-        {tab==="usuarios" && isAdmin && <TabUsuarios showToast={showToast}/>}
-      </div>
-
-      {toast && (
-        <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
-          background:toast.type==="ok"?"#51cf66":"#ff6b6b",color:"#fff",padding:"10px 22px",
-          borderRadius:8,fontWeight:600,fontSize:14,boxShadow:"0 4px 20px #0008",zIndex:999,animation:"fadeIn .2s"}}>
-          {toast.msg}
-        </div>
-      )}
-    </div>
-  );
-}
-function TabConfig({config, onSave, schoolLogo, onSaveLogo, showToast}) {
-  const [f,setF] = useState(config);
-  const set = k => e => setF(p=>({...p,[k]:e.target.value}));
-  const save = () => { onSave(f); showToast("Configuración guardada ✓"); };
-
-  const handleLogoUpload = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { showToast("Solo se permiten imágenes","err"); return; }
-    if (file.size > 2*1024*1024) { showToast("La imagen debe ser menor a 2MB","err"); return; }
-    const reader = new FileReader();
-    reader.onload = ev => { onSaveLogo(ev.target.result); showToast("Foto de escuela guardada ✓"); };
-    reader.readAsDataURL(file);
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>⚙️ Configuración del Ciclo Escolar</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Cada año puedes actualizar estos datos sin borrar a los alumnos.</p>
-
-      {/* Foto de la escuela */}
-      <Card style={{marginBottom:20,background:"#12122a"}}>
-        <div style={{fontSize:14,fontWeight:700,color:"#c0c0e0",marginBottom:14}}>🖼️ Foto / Logo de la Escuela</div>
-        <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-          {/* Preview */}
-          <div style={{flexShrink:0}}>
-            {schoolLogo ? (
-              <img src={schoolLogo} alt="Logo"
-                style={{width:100,height:100,borderRadius:16,objectFit:"cover",
-                  border:"2px solid #4361ee44",boxShadow:"0 0 20px #4361ee20"}}/>
-            ) : (
-              <div style={{width:100,height:100,borderRadius:16,
-                background:"linear-gradient(135deg,#1a1a3e,#2d2d60)",
-                border:"2px dashed #2d2d4e",
-                display:"flex",flexDirection:"column",alignItems:"center",
-                justifyContent:"center",gap:4}}>
-                <span style={{fontSize:32}}>🏫</span>
-                <span style={{fontSize:9,color:"#5050a0"}}>Sin foto</span>
-              </div>
-            )}
-          </div>
-          {/* Upload controls */}
-          <div style={{flex:1,minWidth:200}}>
-            <p style={{fontSize:13,color:"#8080b0",marginBottom:12,lineHeight:1.5}}>
-              Esta imagen aparecerá en la <strong style={{color:"#c0c0e0"}}>pantalla de inicio de sesión</strong> como portada de tu sistema.
-              Formatos: JPG, PNG, WEBP. Máximo 2MB.
-            </p>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              <label style={{
-                background:"linear-gradient(135deg,#4361ee,#3a0ca3)",
-                color:"#fff",padding:"9px 18px",borderRadius:8,
-                cursor:"pointer",fontSize:13,fontWeight:700,
-                border:"none",display:"inline-block",
-                boxShadow:"0 4px 15px #4361ee40"}}>
-                📁 Seleccionar foto
-                <input type="file" accept="image/*" onChange={handleLogoUpload}
-                  style={{display:"none"}}/>
-              </label>
-              {schoolLogo && (
-                <button onClick={()=>{onSaveLogo(null);showToast("Foto eliminada");}}
-                  style={{background:"#1a1a2e",border:"1px solid #ff6b6b44",borderRadius:8,
-                    color:"#ff6b6b",cursor:"pointer",padding:"9px 16px",fontSize:13,fontWeight:600}}>
-                  🗑 Quitar foto
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16,marginBottom:20}}>
-        {[{k:"schoolName",label:"🏫 Nombre de la Escuela",ph:"Mi Escuela"},
-          {k:"year",      label:"📅 Año Escolar",         ph:"2026"},
-          {k:"grade",     label:"🎓 Grado",               ph:"1°, 2°, 3°..."},
-          {k:"group",     label:"👥 Grupo",               ph:"A, B, C..."},
-        ].map(({k,label,ph})=>(
-          <Card key={k}>
-            <div style={{fontSize:12,color:"#7070a0",marginBottom:6}}>{label}</div>
-            <Inp value={f[k]||""} onChange={set(k)} placeholder={ph}/>
-          </Card>
-        ))}
-        <Card>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:6}}>🗓️ Número de Bimestres</div>
-          <Sel value={f.numBimestres} onChange={e=>setF(p=>({...p,numBimestres:parseInt(e.target.value)}))}>
-            {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n} Bimestre{n>1?"s":""}</option>)}
-          </Sel>
-        </Card>
-      </div>
-
-      <Btn onClick={save} style={{minWidth:160}}>💾 Guardar Configuración</Btn>
-
-      <Card style={{marginTop:24,background:"#12122a"}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:10,color:"#c0c0e0"}}>📌 Materias del sistema</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-          {SUBJECTS.map(s=>(
-            <div key={s} style={{background:SUB_COLOR[s].bg,border:`1px solid ${SUB_COLOR[s].accent}44`,
-              borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,color:SUB_COLOR[s].accent}}>
-              {s}
-            </div>
-          ))}
-        </div>
-        <p style={{fontSize:12,color:"#7070a0",marginTop:8}}>Cada materia se evalúa de forma independiente por bimestre.</p>
-      </Card>
-    </div>
-  );
+  // Summary
+  document.getElementById('rptSummary').innerHTML = [
+    { v:dist.MB, l:'MB', c:'#4ade80' },
+    { v:dist.B,  l:'B',  c:'#60a5fa' },
+    { v:dist.S,  l:'S',  c:'#fbbf24' },
+    { v:dist.NS, l:'NS', c:'#f87171' },
+    { v:STATE.students.length, l:'Total', c:'var(--text2)' },
+  ].map(x=>`<div class="summary-card">
+    <div class="s-val" style="color:${x.c}">${x.v}</div>
+    <div class="s-lbl">${x.l}</div>
+  </div>`).join('');
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: ALUMNOS                                                  */
-/* ══════════════════════════════════════════════════════════════ */
-function TabAlumnos({students, onSave, showToast}) {
-  const [newName,  setNewName]  = useState("");
-  const [editId,   setEditId]   = useState(null);
-  const [editName, setEditName] = useState("");
-  const [search,   setSearch]   = useState("");
-  const [confirmDel, setConfirmDel] = useState(null);
-
-  const filtered = students.filter(s=>s.name.toLowerCase().includes(search.toLowerCase()));
-
-  const add = () => {
-    const name = newName.trim(); if (!name) return;
-    if (students.find(s=>s.name.toLowerCase()===name.toLowerCase()))
-      { showToast("Ya existe ese alumno","err"); return; }
-    onSave([...students,{id:uid(),name}]);
-    setNewName(""); showToast(`"${name}" agregado ✓`);
-  };
-
-  const del = id => {
-    const s = students.find(x=>x.id===id);
-    onSave(students.filter(x=>x.id!==id));
-    showToast(`"${s?.name}" eliminado`); setConfirmDel(null);
-  };
-
-  const saveEdit = () => {
-    const name = editName.trim(); if (!name) return;
-    onSave(students.map(s=>s.id===editId?{...s,name}:s));
-    setEditId(null); showToast("Nombre actualizado ✓");
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>👥 Gestión de Alumnos</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>Los alumnos persisten entre ciclos escolares.</p>
-
-      <Card style={{marginBottom:20}}>
-        <div style={{fontSize:13,fontWeight:600,marginBottom:10,color:"#c0c0e0"}}>➕ Agregar Alumno</div>
-        <div style={{display:"flex",gap:10}}>
-          <Inp value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Nombre completo..."
-            onKeyDown={e=>e.key==="Enter"&&add()} style={{flex:1}}/>
-          <Btn onClick={add} disabled={!newName.trim()}>Agregar</Btn>
-        </div>
-      </Card>
-
-      <div style={{display:"flex",gap:10,marginBottom:16,alignItems:"center",flexWrap:"wrap"}}>
-        <Inp value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar alumno..." style={{maxWidth:280}}/>
-        <span style={{color:"#7070a0",fontSize:13,marginLeft:"auto"}}>{filtered.length} / {students.length} alumnos</span>
-      </div>
-
-      {filtered.length===0 ? (
-        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>
-          {students.length===0?"No hay alumnos. ¡Agrega el primero!":"Sin resultados."}
-        </Card>
-      ) : (
-        <div style={{display:"grid",gap:8}}>
-          {filtered.map((s,i)=>(
-            <Card key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px"}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:"#1a1a3e",border:"1px solid #3d3d70",
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"#7070c0",flexShrink:0}}>
-                {i+1}
-              </div>
-              {editId===s.id ? (
-                <>
-                  <Inp value={editName} onChange={e=>setEditName(e.target.value)} style={{flex:1}}
-                    onKeyDown={e=>e.key==="Enter"&&saveEdit()}/>
-                  <Btn onClick={saveEdit} variant="success" style={{padding:"5px 12px"}}>✓</Btn>
-                  <Btn onClick={()=>setEditId(null)} variant="secondary" style={{padding:"5px 12px"}}>✕</Btn>
-                </>
-              ) : (
-                <>
-                  <span style={{flex:1,fontWeight:500}}>{s.name}</span>
-                  <Btn onClick={()=>{setEditId(s.id);setEditName(s.name);}} variant="secondary" style={{padding:"5px 10px"}}>✏️</Btn>
-                  <Btn onClick={()=>setConfirmDel(s.id)} variant="danger" style={{padding:"5px 10px"}}>🗑️</Btn>
-                </>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Delete confirm modal */}
-      {confirmDel && (()=>{
-        const s = students.find(x=>x.id===confirmDel);
-        return (
-          <div style={{position:"fixed",inset:0,background:"#000a",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
-            <Card style={{maxWidth:340,textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-              <div style={{fontWeight:700,marginBottom:8}}>¿Eliminar alumno?</div>
-              <div style={{color:"#a0a0c0",fontSize:14,marginBottom:20}}>
-                Se eliminará a <strong>{s?.name}</strong> y todas sus calificaciones.
-              </div>
-              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-                <Btn onClick={()=>del(confirmDel)} variant="danger">Sí, eliminar</Btn>
-                <Btn onClick={()=>setConfirmDel(null)} variant="secondary">Cancelar</Btn>
-              </div>
-            </Card>
-          </div>
-        );
-      })()}
-    </div>
-  );
+function printReport() {
+  window.print();
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: CALIFICACIONES                                           */
-/* ══════════════════════════════════════════════════════════════ */
-function TabCalifs({config, students, grades, weights, totals, rawGrades, onSave, onSaveRaw, showToast}) {
-  const [subject,      setSubject]      = useState(SUBJECTS[0]);
-  const [bimestre,     setBimestre]     = useState(1);
-  const [local,        setLocal]        = useState({});
-  const [dirty,        setDirty]        = useState(false);
-  const [editingRows,  setEditingRows]  = useState(new Set());
-  const [confirmClear, setConfirmClear] = useState(null);
+function exportExcel() {
+  const selSub = document.getElementById('rptSubject').value;
+  const selBim = document.getElementById('rptBim').value;
+  const subjects = selSub ? [selSub] : SUBJECTS;
+  const n = STATE.config.bimestres || 5;
+  const bims = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
+  const cols = [];
+  subjects.forEach(s => bims.forEach(b => cols.push({s,b,label:`${s} B${b}`})));
 
-  const col  = SUB_COLOR[subject];
-  const wKey = `${subject}-${bimestre}`;
-  const w    = weights[wKey] || DEF_W;
-  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
+  const header = ['#','Alumno',...cols.map(c=>c.label),'Promedio'];
+  const data   = [header];
+  STATE.students.forEach((stu,i) => {
+    const grades = cols.map(c => calcGrade(stu.id,c.s,c.b));
+    const valid  = grades.filter(g=>g>0);
+    const avg    = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 0;
+    data.push([i+1, stu.name,
+      ...grades.map(g=>g>0?(g/10).toFixed(1):''),
+      avg>0?(avg/10).toFixed(1):'']);
+  });
 
-  const getMax = crit => {
-    if (CRIT_TYPE[crit] === "pct_directo") return null;
-    const t = totals[`${subject}-${bimestre}-${crit}`];
-    return (t && t > 0) ? t : null;
-  };
-  const anyMaxConfigured = CRITERIA.some(c => CRIT_TYPE[c] !== "pct_directo" && getMax(c));
-
-  // Convierte valor crudo → calificación 0-10
-  const toGrade = (val, crit) => {
-    const n = parseFloat(val);
-    if (isNaN(n) || val === "") return null;
-    const type = CRIT_TYPE[crit];
-    if (type === "pct_directo") {
-      const maxPct = w[crit] || 0;
-      if (!maxPct) return null;
-      return Math.min(10, Math.round((n / maxPct) * 10 * 100) / 100);
-    }
-    const max = getMax(crit);
-    if (max) return Math.min(10, Math.round((n / max) * 10 * 100) / 100);
-    return Math.min(10, Math.max(0, n));
-  };
-
-  // Contribución al promedio global en puntos %
-  const toContrib = (val, crit) => {
-    const n = parseFloat(val);
-    if (isNaN(n) || val === "") return null;
-    const type = CRIT_TYPE[crit];
-    if (type === "pct_directo") return Math.min(w[crit]||0, Math.round(n * 100) / 100);
-    const max = getMax(crit);
-    if (max) return Math.round((n / max) * (w[crit]||0) * 100) / 100;
-    return null;
-  };
-
-  const getConvertedRow = sid => {
-    const row = local[sid] || {};
-    const out = {};
-    CRITERIA.forEach(c => { const g = toGrade(row[c], c); if (g !== null) out[c] = g; });
-    return out;
-  };
-
-  // Carga valores guardados al estado local
-  const loadLocal = (stus, grd, raw, tot, sub, bim) => {
-    const init = {};
-    stus.forEach(s => {
-      const key      = `${s.id}-${sub}-${bim}`;
-      const rawEntry = raw[key] || {};
-      const grdEntry = grd[key] || {};
-      const entry    = {};
-      CRITERIA.forEach(c => {
-        const type = CRIT_TYPE[c];
-        if (type === "pct_directo") {
-          entry[c] = rawEntry[c] !== undefined ? rawEntry[c] : "";
-        } else {
-          const max = tot[`${sub}-${bim}-${c}`];
-          entry[c]  = (max && rawEntry[c] !== undefined) ? rawEntry[c] : (grdEntry[c] ?? "");
-        }
-      });
-      init[s.id] = entry;
-    });
-    return init;
-  };
-
-  useEffect(() => {
-    setLocal(loadLocal(students, grades, rawGrades, totals, subject, bimestre));
-    setDirty(false);
-    setEditingRows(new Set()); // reset editing state on subject/bimestre change
-  }, [subject, bimestre, students, grades, rawGrades, totals]);
-
-  const setVal = (sid, crit, val) => {
-    setLocal(p => ({...p, [sid]: {...p[sid], [crit]: val}}));
-    setDirty(true);
-  };
-
-  // Snapshot of saved values for a student (to cancel edits)
-  const getSavedSnapshot = sid => {
-    const key      = `${sid}-${subject}-${bimestre}`;
-    const rawEntry = rawGrades[key] || {};
-    const grdEntry = grades[key]    || {};
-    const entry    = {};
-    CRITERIA.forEach(c => {
-      const type = CRIT_TYPE[c];
-      if (type === "pct_directo") {
-        entry[c] = rawEntry[c] !== undefined ? rawEntry[c] : "";
-      } else {
-        const max = totals[`${subject}-${bimestre}-${c}`];
-        entry[c] = (max && rawEntry[c] !== undefined) ? rawEntry[c] : (grdEntry[c] ?? "");
-      }
-    });
-    return entry;
-  };
-
-  const startEdit = sid => setEditingRows(p => new Set([...p, sid]));
-
-  const cancelEdit = sid => {
-    setLocal(p => ({...p, [sid]: getSavedSnapshot(sid)}));
-    setEditingRows(p => { const n = new Set(p); n.delete(sid); return n; });
-  };
-
-  // Save a single student's row
-  const saveRow = sid => {
-    const nextGrades = {...grades};
-    const nextRaw    = {...rawGrades};
-    const key        = `${sid}-${subject}-${bimestre}`;
-    nextGrades[key]  = getConvertedRow(sid);
-    const rawEntry   = {};
-    CRITERIA.forEach(c => { if ((local[sid]?.[c] ?? "") !== "") rawEntry[c] = local[sid][c]; });
-    nextRaw[key]     = rawEntry;
-    onSave(nextGrades);
-    onSaveRaw(nextRaw);
-    setEditingRows(p => { const n = new Set(p); n.delete(sid); return n; });
-    // check if any other rows still dirty
-    const remaining = students.filter(s => s.id !== sid && editingRows.has(s.id));
-    if (remaining.length === 0) setDirty(false);
-    showToast(`Guardado: ${students.find(x=>x.id===sid)?.name} ✓`);
-  };
-
-  // Save ALL rows at once
-  const saveAll = () => {
-    const nextGrades = {...grades};
-    const nextRaw    = {...rawGrades};
-    students.forEach(s => {
-      const key       = `${s.id}-${subject}-${bimestre}`;
-      nextGrades[key] = getConvertedRow(s.id);
-      const rawEntry  = {};
-      CRITERIA.forEach(c => { if ((local[s.id]?.[c] ?? "") !== "") rawEntry[c] = local[s.id][c]; });
-      nextRaw[key]    = rawEntry;
-    });
-    onSave(nextGrades);
-    onSaveRaw(nextRaw);
-    setDirty(false);
-    setEditingRows(new Set());
-    showToast(`${subject} · Bimestre ${bimestre} guardado ✓`);
-  };
-
-  const clearStudent = sid => {
-    setLocal(p => ({...p, [sid]: {tareas:"",trabajos:"",disciplina:"",examen:""}}));
-    setEditingRows(p => new Set([...p, sid])); // auto enter edit mode so can save
-    setDirty(true);
-    setConfirmClear(null);
-    showToast("Calificaciones limpiadas — guarda para confirmar");
-  };
-
-  const hasSaved = sid => {
-    const g = grades[`${sid}-${subject}-${bimestre}`] || {};
-    return CRITERIA.some(c => g[c] !== undefined && g[c] !== "");
-  };
-
-  // New students (no saved data) start in edit mode automatically
-  useEffect(() => {
-    const newEditing = new Set();
-    students.forEach(s => { if (!hasSaved(s.id)) newEditing.add(s.id); });
-    setEditingRows(newEditing);
-  }, [subject, bimestre, students, grades]);
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>✏️ Calificaciones</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Las calificaciones guardadas se muestran en modo lectura. Presiona ✏️ para corregir.</p>
-
-      {/* Unsaved changes banner */}
-      {dirty && (
-        <div style={{background:"#ffd43b18",border:"1px solid #ffd43b55",borderRadius:8,
-          padding:"8px 14px",marginBottom:14,fontSize:13,color:"#ffd43b",
-          display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-          <span>⚠️ Tienes filas con cambios sin guardar en <strong>{subject} · Bimestre {bimestre}</strong></span>
-          <Btn onClick={saveAll} style={{padding:"5px 14px",fontSize:12}}>💾 Guardar todo</Btn>
-        </div>
-      )}
-
-      {/* Selectors */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:16}}>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Materia</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {SUBJECTS.map(sub => {
-              const c = SUB_COLOR[sub];
-              return (
-                <button key={sub} onClick={()=>{ if(dirty&&!confirm("¿Cambiar sin guardar?")) return; setSubject(sub); }} style={{
-                  padding:"8px 14px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13,
-                  background:subject===sub?c.bg:"#1a1a2e",
-                  border:subject===sub?`1px solid ${c.accent}`:"1px solid #2d2d4e",
-                  color:subject===sub?c.accent:"#7070a0",transition:"all .15s"
-                }}>{sub}</button>
-              );
-            })}
-          </div>
-        </div>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Bimestre</div>
-          <div style={{display:"flex",gap:6}}>
-            {bims.map(n => (
-              <button key={n} onClick={()=>{ if(dirty&&!confirm("¿Cambiar sin guardar?")) return; setBimestre(n); }} style={{
-                width:38,height:36,borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:14,
-                background:bimestre===n?"#4361ee":"#1a1a2e",
-                border:bimestre===n?"1px solid #4361ee":"1px solid #2d2d4e",
-                color:bimestre===n?"#fff":"#7070a0",
-              }}>{n}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Info bar: peso + tipo + máximo de cada criterio */}
-      <Card style={{marginBottom:14,background:col.bg,borderColor:col.accent+"44",padding:"10px 14px"}}>
-        <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-          {CRITERIA.map(c => {
-            const type  = CRIT_TYPE[c];
-            const max   = getMax(c);
-            const typeC = type === "cantidad" ? "#4dabf7" : type === "pct_directo" ? "#cc5de8" : "#51cf66";
-            return (
-              <div key={c} style={{background:"#00000030",borderRadius:8,padding:"8px 12px",flex:"1 1 120px"}}>
-                <div style={{fontSize:11,color:col.light,marginBottom:3}}>{C_ICONS[c]} {C_LABELS[c]}</div>
-                <div style={{fontSize:15,fontWeight:800,color:col.accent,marginBottom:3}}>{w[c]}%</div>
-                <div style={{fontSize:10,padding:"2px 6px",borderRadius:4,display:"inline-block",
-                  background:typeC+"22",color:typeC,border:`1px solid ${typeC}44`}}>
-                  {type === "cantidad"    && (max ? `${max} tareas/trabajos` : "⚠ configura cantidad")}
-                  {type === "reactivos"   && (max ? `${max} reactivos`       : "⚠ configura reactivos")}
-                  {type === "pct_directo" && `% directo (0–${w[c]}%)`}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {students.length === 0 ? (
-        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>
-          Ve a la pestaña 👥 Alumnos para agregar alumnos.
-        </Card>
-      ) : (
-        <>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",minWidth:560}}>
-              <thead>
-                <tr style={{background:"#12122a"}}>
-                  <th style={TH}>#</th>
-                  <th style={{...TH,textAlign:"left",minWidth:130}}>Alumno</th>
-                  {CRITERIA.map(c => {
-                    const max  = getMax(c);
-                    const type = CRIT_TYPE[c];
-                    return (
-                      <th key={c} style={TH}>
-                        {C_ICONS[c]} {C_LABELS[c]}<br/>
-                        <span style={{fontWeight:400,fontSize:10,color:
-                          type==="pct_directo"?"#cc5de8":max?"#51cf66":"#ffd43b"}}>
-                          {w[c]}%
-                          {type==="cantidad"    && (max ? ` · ${max}pzs` : " · ⚠sin config")}
-                          {type==="reactivos"   && (max ? ` · ${max}rcts`: " · ⚠sin config")}
-                          {type==="pct_directo" && ` · %directo`}
-                        </span>
-                      </th>
-                    );
-                  })}
-                  <th style={{...TH,color:col.accent}}>Promedio</th>
-                  <th style={{...TH,fontSize:11,color:"#5050a0"}}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s, i) => {
-                  const row       = local[s.id] || {};
-                  const converted = getConvertedRow(s.id);
-                  const avg       = calcAvg(converted, w);
-                  const saved     = hasSaved(s.id);
-                  const isEditing = editingRows.has(s.id);
-
-                  return (
-                    <tr key={s.id} style={{
-                      borderBottom:"1px solid #1d1d38",
-                      background: isEditing ? col.bg+"88" : "transparent",
-                      transition:"background .2s"
-                    }}>
-                      {/* # */}
-                      <td style={{...TD,color:"#5050a0",width:28,fontSize:12}}>{i+1}</td>
-
-                      {/* Alumno */}
-                      <td style={{...TD,textAlign:"left",fontWeight:500}}>
-                        <div style={{display:"flex",alignItems:"center",gap:5}}>
-                          <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:110}}>{s.name}</span>
-                          {saved && !isEditing && <span style={{fontSize:9,color:"#51cf6680"}}>✓</span>}
-                          {isEditing && saved    && <span style={{fontSize:9,color:col.accent,fontWeight:700}}>EDITANDO</span>}
-                          {isEditing && !saved   && <span style={{fontSize:9,color:"#ffd43b"}}>NUEVO</span>}
-                        </div>
-                      </td>
-
-                      {/* Criterios */}
-                      {CRITERIA.map(c => {
-                        const max    = getMax(c);
-                        const type   = CRIT_TYPE[c];
-                        const raw    = row[c] ?? "";
-                        const grade  = toGrade(raw, c);
-                        const contrib = toContrib(raw, c);
-                        const gradeColor = grade !== null
-                          ? (grade>=7?"#51cf66":grade>=6?"#ffd43b":"#ff6b6b")
-                          : "#3d3d60";
-
-                        // ── MODO LECTURA ──
-                        if (!isEditing) {
-                          return (
-                            <td key={c} style={{...TD,padding:"7px 5px"}}>
-                              <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                                {/* Valor principal */}
-                                <span style={{fontSize:14,fontWeight:700,color:gradeColor}}>
-                                  {raw !== "" ? (
-                                    type === "pct_directo"
-                                      ? `${raw}%`
-                                      : max
-                                        ? `${raw}/${max}`
-                                        : parseFloat(raw).toFixed(1)
-                                  ) : "–"}
-                                </span>
-                                {/* Contribución al promedio */}
-                                {contrib !== null && (
-                                  <span style={{fontSize:10,color:gradeColor,opacity:.8}}>
-                                    {contrib.toFixed(1)}% de {w[c]}%
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        }
-
-                        // ── MODO EDICIÓN ──
-                        const inputMax  = type === "pct_directo" ? w[c] : (max || undefined);
-                        const inputStep = type === "pct_directo" ? 0.5 : 1;
-                        const inputW    = 58;
-                        const unitLabel = type === "cantidad" ? `/${max||"?"}` : type === "reactivos" ? `/${max||"?"}` : "%";
-
-                        return (
-                          <td key={c} style={{...TD,padding:"5px 3px"}}>
-                            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                              <div style={{display:"flex",alignItems:"center",gap:2}}>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={inputMax}
-                                  step={inputStep}
-                                  value={raw}
-                                  onChange={e => setVal(s.id, c, e.target.value)}
-                                  placeholder="–"
-                                  style={{
-                                    width: inputW,
-                                    background:"#0d0d1a",
-                                    border:`2px solid ${col.accent}88`,
-                                    borderRadius:6, color:"#fff",
-                                    padding:"6px 4px", fontSize:14, fontWeight:700,
-                                    textAlign:"center", outline:"none",
-                                  }}/>
-                                <span style={{fontSize:11,color:col.accent,fontWeight:600}}>{unitLabel}</span>
-                              </div>
-                              {/* Preview contribución */}
-                              {contrib !== null && (
-                                <div style={{fontSize:10,fontWeight:700,color:gradeColor}}>
-                                  = {contrib.toFixed(1)}% <span style={{color:"#5050a0",fontWeight:400}}>de {w[c]}%</span>
-                                </div>
-                              )}
-                              {/* Advertencia sin max configurado */}
-                              {type !== "pct_directo" && !max && raw === "" && (
-                                <div style={{fontSize:9,color:"#ffd43b"}}>sin máx.</div>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-
-                      {/* Promedio */}
-                      <td style={{...TD,fontWeight:800,minWidth:65}}>
-                        {avg !== null
-                          ? <span style={{color:avg>=7?"#51cf66":avg>=6?"#ffd43b":"#ff6b6b",fontSize:15}}>
-                              {avg.toFixed(1)} <Badge value={avg}/>
-                            </span>
-                          : <span style={{color:"#3d3d60"}}>–</span>
-                        }
-                      </td>
-
-                      {/* Acciones */}
-                      <td style={{...TD,padding:"4px 4px",width:100}}>
-                        {!isEditing ? (
-                          /* BOTÓN EDITAR */
-                          <button onClick={()=>startEdit(s.id)}
-                            title="Editar calificaciones de este alumno"
-                            style={{
-                              background:`linear-gradient(135deg,${col.bg},${col.bg})`,
-                              border:`1px solid ${col.accent}66`,
-                              borderRadius:6,color:col.accent,cursor:"pointer",
-                              padding:"5px 10px",fontSize:12,fontWeight:700,
-                              display:"flex",alignItems:"center",gap:4,
-                              transition:"all .15s",whiteSpace:"nowrap"
-                            }}
-                            onMouseOver={e=>{e.currentTarget.style.background=col.bg;e.currentTarget.style.borderColor=col.accent;}}
-                            onMouseOut={e=>{e.currentTarget.style.borderColor=col.accent+"66";}}>
-                            ✏️ Editar
-                          </button>
-                        ) : (
-                          /* BOTONES GUARDAR / CANCELAR */
-                          <div style={{display:"flex",gap:4}}>
-                            <button onClick={()=>saveRow(s.id)}
-                              title="Guardar esta fila"
-                              style={{
-                                background:"linear-gradient(135deg,#1e6f3e,#27a356)",
-                                border:"none",borderRadius:6,color:"#fff",
-                                cursor:"pointer",padding:"5px 10px",fontSize:12,fontWeight:700,
-                                transition:"opacity .15s"
-                              }}
-                              onMouseOver={e=>e.currentTarget.style.opacity=".85"}
-                              onMouseOut={e=>e.currentTarget.style.opacity="1"}>
-                              ✓ OK
-                            </button>
-                            <button onClick={()=>cancelEdit(s.id)}
-                              title="Cancelar edición"
-                              style={{
-                                background:"#1a1a2e",border:"1px solid #2d2d4e",
-                                borderRadius:6,color:"#7070a0",cursor:"pointer",
-                                padding:"5px 8px",fontSize:12,transition:"all .15s"
-                              }}
-                              onMouseOver={e=>{e.currentTarget.style.borderColor="#ff6b6b44";e.currentTarget.style.color="#ff6b6b";}}
-                              onMouseOut={e=>{e.currentTarget.style.borderColor="#2d2d4e";e.currentTarget.style.color="#7070a0";}}>
-                              ✕
-                            </button>
-                            <button onClick={()=>setConfirmClear(s.id)}
-                              title="Borrar calificaciones"
-                              style={{
-                                background:"#1a1a2e",border:"1px solid #2d2d4e",
-                                borderRadius:6,color:"#5050a0",cursor:"pointer",
-                                padding:"5px 7px",fontSize:11,transition:"all .15s"
-                              }}
-                              onMouseOver={e=>{e.currentTarget.style.borderColor="#ff6b6b44";e.currentTarget.style.color="#ff6b6b";}}
-                              onMouseOut={e=>{e.currentTarget.style.borderColor="#2d2d4e";e.currentTarget.style.color="#5050a0";}}>
-                              🗑
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Fórmula */}
-          <Card style={{marginTop:12,background:"#12122a",borderColor:"#4361ee22",padding:"8px 14px"}}>
-            <div style={{fontSize:11,color:"#6060a0",marginBottom:6,fontWeight:600}}>📐 Fórmula de cálculo aplicada</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-              {CRITERIA.map(c=>{
-                const type = CRIT_TYPE[c];
-                const max  = getMax(c);
-                return (
-                  <div key={c} style={{background:"#0d0d1a",borderRadius:6,padding:"6px 10px",fontSize:11}}>
-                    <div style={{color:col.accent,fontWeight:700,marginBottom:2}}>{C_ICONS[c]} {C_LABELS[c]} ({w[c]}%)</div>
-                    <div style={{color:"#8080b0"}}>
-                      {type === "cantidad"    && (max ? `cantidad ÷ ${max} × ${w[c]}%` : "configura el total en 🎯 Aciertos")}
-                      {type === "reactivos"   && (max ? `aciertos ÷ ${max} × ${w[c]}%` : "configura reactivos en 🎯 Aciertos")}
-                      {type === "pct_directo" && `docente asigna % directo (0–${w[c]}%)`}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          <div style={{marginTop:12,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-            <Btn onClick={saveAll}>💾 Guardar todo — {subject} · Bimestre {bimestre}</Btn>
-            {dirty
-              ? <span style={{fontSize:12,color:"#ffd43b"}}>● Filas con cambios pendientes</span>
-              : <span style={{fontSize:12,color:"#51cf6688"}}>✓ Todo guardado</span>
-            }
-          </div>
-        </>
-      )}
-
-      {/* Confirm clear */}
-      {confirmClear && (() => {
-        const st = students.find(x=>x.id===confirmClear);
-        return (
-          <div style={{position:"fixed",inset:0,background:"#000b",display:"flex",
-            alignItems:"center",justifyContent:"center",zIndex:200}}>
-            <Card style={{maxWidth:340,textAlign:"center",padding:24}}>
-              <div style={{fontSize:32,marginBottom:10}}>🗑️</div>
-              <div style={{fontWeight:700,marginBottom:8}}>¿Limpiar calificaciones?</div>
-              <div style={{color:"#a0a0c0",fontSize:13,marginBottom:20}}>
-                Se borrarán los valores de <strong>{st?.name}</strong> para{" "}
-                <strong>{subject} · Bimestre {bimestre}</strong>.<br/>
-                <span style={{color:"#ffd43b",fontSize:12}}>Presiona ✓ OK después para guardar el cambio.</span>
-              </div>
-              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-                <Btn onClick={()=>clearStudent(confirmClear)} variant="danger">Sí, limpiar</Btn>
-                <Btn onClick={()=>setConfirmClear(null)} variant="secondary">Cancelar</Btn>
-              </div>
-            </Card>
-          </div>
-        );
-      })()}
-    </div>
-  );
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Calificaciones');
+  const cfg = STATE.config;
+  const fname = `Calificaciones_${cfg.grade||''}${cfg.group||''}_${cfg.year||''}_${Date.now()}.xlsx`;
+  XLSX.writeFile(wb, fname);
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: VALORES / PORCENTAJES  (solo Master Admin)              */
-/* ══════════════════════════════════════════════════════════════ */
-function TabPesos({config, weights, totals, onSave, onSaveTotals, showToast}) {
-  const [subject, setSubject] = useState(SUBJECTS[0]);
-  const [localW,  setLocalW]  = useState({});
-  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
-
-  useEffect(()=>{
-    const init={};
-    bims.forEach(b=>{ init[b]={...(weights[`${subject}-${b}`]||DEF_W)}; });
-    setLocalW(init);
-  },[subject,config.numBimestres,weights]);
-
-  const setW    = (bim,crit,val) => setLocalW(p=>({...p,[bim]:{...p[bim],[crit]:parseInt(val)||0}}));
-  const total   = bim => CRITERIA.reduce((s,c)=>s+(localW[bim]?.[c]||0),0);
-  const col     = SUB_COLOR[subject];
-
-  const savePesos = () => {
-    const next={...weights};
-    bims.forEach(b=>{ next[`${subject}-${b}`]=localW[b]; });
-    onSave(next); showToast(`Porcentajes de ${subject} guardados ✓`);
-  };
-
-  const copyB1 = () => {
-    const base=localW[1]||DEF_W; const next={};
-    bims.forEach(b=>{ next[b]={...base}; });
-    setLocalW(next); showToast("Bim.1 copiado a todos ✓");
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>⚖️ Porcentajes de Evaluación</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Define el peso de cada criterio por materia y bimestre. La suma debe ser exactamente 100%.</p>
-
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        {SUBJECTS.map(sub=>{
-          const c=SUB_COLOR[sub];
-          return (
-            <button key={sub} onClick={()=>setSubject(sub)} style={{
-              padding:"8px 18px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:14,
-              background:subject===sub?c.bg:"#1a1a2e",
-              border:subject===sub?`2px solid ${c.accent}`:"2px solid #2d2d4e",
-              color:subject===sub?c.accent:"#7070a0",
-            }}>{sub}</button>
-          );
-        })}
-      </div>
-
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <Btn onClick={copyB1} variant="secondary">📋 Copiar Bim.1 a todos</Btn>
-        <Btn onClick={()=>{ const n={}; bims.forEach(b=>{n[b]={...DEF_W};}); setLocalW(n); showToast("Valores restablecidos"); }} variant="secondary">🔄 Restablecer</Btn>
-        <Btn onClick={savePesos}>💾 Guardar {subject}</Btn>
-      </div>
-
-      <div style={{display:"grid",gap:12,gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))"}}>
-        {bims.map(b=>{
-          const t=total(b); const ok=t===100;
-          return (
-            <Card key={b} style={{border:`1px solid ${ok?col.accent+"44":"#ff6b6b44"}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <span style={{fontWeight:700,color:col.accent}}>Bimestre {b}</span>
-                <span style={{fontSize:12,fontWeight:700,color:ok?"#51cf66":"#ff6b6b"}}>{ok?"✓ 100%":`⚠️ ${t}%`}</span>
-              </div>
-              {CRITERIA.map(c=>(
-                <div key={c} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <span style={{fontSize:12,width:88,color:"#c0c0e0",flexShrink:0}}>{C_ICONS[c]} {C_LABELS[c]}</span>
-                  <input type="range" min={0} max={100} value={localW[b]?.[c]??0}
-                    onChange={e=>setW(b,c,e.target.value)} style={{flex:1,accentColor:col.accent}}/>
-                  <input type="number" min={0} max={100} value={localW[b]?.[c]??0}
-                    onChange={e=>setW(b,c,e.target.value)}
-                    style={{width:48,background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:5,
-                      color:col.accent,padding:"4px 5px",fontSize:13,textAlign:"center",fontWeight:700,outline:"none"}}/>
-                  <span style={{fontSize:11,color:"#5050a0"}}>%</span>
-                </div>
-              ))}
-              <div style={{height:5,background:"#1a1a2e",borderRadius:3,overflow:"hidden",marginTop:8,display:"flex"}}>
-                {CRITERIA.map((c,ci)=>{
-                  const bc=["#4dabf7","#51cf66","#ffd43b","#ff6b6b"];
-                  return <div key={c} style={{width:`${localW[b]?.[c]??0}%`,background:bc[ci],transition:"width .2s"}}/>;
-                })}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
+/* ═══════════════════════════════════════════════════════════════
+   SYNC TAB
+═══════════════════════════════════════════════════════════════ */
+function updateSyncTab() {
+  const url = getApiUrl();
+  document.getElementById('apiUrlInput').value = url || '';
+  document.getElementById('apiUrlStatus').textContent = url ? '✅ URL configurada' : '';
+  setSyncUI(url ? 'ok' : 'idle');
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: ACIERTOS  (docente + admin)                             */
-/*  Configura el total de reactivos POR MATERIA y POR BIMESTRE  */
-/* ══════════════════════════════════════════════════════════════ */
-function TabAciertos({config, totals, weights, onSaveTotals, showToast}) {
-  const [subject,  setSubject]  = useState(SUBJECTS[0]);
-  const [bimestre, setBimestre] = useState(1);
-  const [local,    setLocal]    = useState({});
-
-  const col  = SUB_COLOR[subject];
-  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
-  const w    = weights[`${subject}-${bimestre}`] || DEF_W;
-
-  // Load current values for selected subject+bimestre
-  useEffect(()=>{
-    const init={};
-    CRITERIA.forEach(c=>{
-      init[c] = totals[`${subject}-${bimestre}-${c}`] || "";
-    });
-    setLocal(init);
-  },[subject, bimestre, totals]);
-
-  const setVal = (crit, val) => setLocal(p=>({...p,[crit]:val}));
-
-  const save = () => {
-    const next = {...totals};
-    CRITERIA.forEach(c=>{
-      const key = `${subject}-${bimestre}-${c}`;
-      const v   = parseInt(local[c]);
-      if (v > 0) next[key] = v;
-      else delete next[key];
-    });
-    onSaveTotals(next);
-    showToast(`Aciertos de ${subject} · Bimestre ${bimestre} guardados ✓`);
-  };
-
-  // Copy current bimestre values to all bimestres for this subject
-  const copyToAll = () => {
-    const next = {...totals};
-    bims.forEach(b=>{
-      CRITERIA.forEach(c=>{
-        const key = `${subject}-${b}-${c}`;
-        const v   = parseInt(local[c]);
-        if (v > 0) next[key] = v;
-        else delete next[key];
-      });
-    });
-    onSaveTotals(next);
-    showToast(`Máximos de ${subject} Bim.${bimestre} copiados a todos los bimestres ✓`);
-  };
-
-  // Summary of all configured maximos for this subject
-  const getSummary = () => {
-    return bims.map(b=>({
-      bim: b,
-      criteria: CRITERIA.map(c=>({ c, max: totals[`${subject}-${b}-${c}`]||null }))
-    }));
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>🎯 Configuración de Aciertos</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>
-        Define el total de reactivos o puntos posibles para cada criterio, <strong style={{color:"#e8e8f0"}}>por materia y por bimestre</strong>.
-        El sistema convierte automáticamente al capturar calificaciones.
-      </p>
-
-      {/* How it works card */}
-      <Card style={{marginBottom:20,background:"#1a1a3e",borderColor:"#4361ee44"}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#c0c0e0",marginBottom:8}}>💡 Tipos de criterio</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:10}}>
-          {[
-            {c:"tareas",     color:"#4dabf7", ex:"50 tareas en el bimestre → alumno entregó 25 → 25/50 × 20% = 10%"},
-            {c:"trabajos",   color:"#51cf66", ex:"10 trabajos → alumno hizo 8 → 8/10 × 30% = 24%"},
-            {c:"disciplina", color:"#cc5de8", ex:"La maestra asigna directamente entre 0% y el peso (ej. 15% de 20%)"},
-            {c:"examen",     color:"#fd7e14", ex:"40 reactivos → alumno respondió 32 → 32/40 × 40% = 32%"},
-          ].map(({c,color,ex})=>(
-            <div key={c} style={{background:"#0d0d1a",borderRadius:8,padding:"10px 12px"}}>
-              <div style={{fontSize:12,fontWeight:700,color,marginBottom:3}}>{C_ICONS[c]} {C_LABELS[c]}</div>
-              <div style={{fontSize:10,padding:"1px 6px",borderRadius:3,display:"inline-block",marginBottom:5,
-                background:color+"18",color,border:`1px solid ${color}44`}}>
-                {CRIT_TYPE_LABEL[CRIT_TYPE[c]].short}
-              </div>
-              <div style={{fontSize:11,color:"#6060a0",lineHeight:1.4}}>{ex}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Selectors */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:16,marginBottom:20}}>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:6,fontWeight:600}}>📚 MATERIA</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {SUBJECTS.map(sub=>{
-              const c=SUB_COLOR[sub];
-              // Show configured indicator
-              const hasSome = CRITERIA.some(cr=>totals[`${sub}-${bimestre}-${cr}`]);
-              return (
-                <button key={sub} onClick={()=>setSubject(sub)} style={{
-                  padding:"8px 16px",borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:13,
-                  background:subject===sub?c.bg:"#1a1a2e",
-                  border:subject===sub?`2px solid ${c.accent}`:"2px solid #2d2d4e",
-                  color:subject===sub?c.accent:"#7070a0",position:"relative"
-                }}>
-                  {sub}
-                  {hasSome && <span style={{position:"absolute",top:2,right:4,width:6,height:6,borderRadius:"50%",background:"#51cf66"}}/>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:6,fontWeight:600}}>📅 BIMESTRE</div>
-          <div style={{display:"flex",gap:6}}>
-            {bims.map(n=>{
-              const hasSome = CRITERIA.some(cr=>totals[`${subject}-${n}-${cr}`]);
-              return (
-                <button key={n} onClick={()=>setBimestre(n)} style={{
-                  width:40,height:38,borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:14,
-                  background:bimestre===n?"#4361ee":"#1a1a2e",
-                  border:bimestre===n?"1px solid #4361ee":hasSome?"1px solid #51cf6666":"1px solid #2d2d4e",
-                  color:bimestre===n?"#fff":hasSome?"#51cf66":"#7070a0",
-                }}>{n}</button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Criteria inputs */}
-      <Card style={{marginBottom:16, borderColor:col.accent+"33", background:col.bg}}>
-        <div style={{fontSize:14,fontWeight:700,color:col.accent,marginBottom:14}}>
-          {subject} · Bimestre {bimestre} — Configura el máximo por criterio
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>
-          {CRITERIA.map(c=>{
-            const type    = CRIT_TYPE[c];
-            const val     = local[c];
-            const hasVal  = type !== "pct_directo" && parseInt(val) > 0;
-            const typeColor = type==="cantidad" ? "#4dabf7" : type==="pct_directo" ? "#cc5de8" : "#51cf66";
-            const isPctDirect = type === "pct_directo";
-
-            return (
-              <div key={c} style={{background:"#00000030",borderRadius:10,padding:"14px"}}>
-                <div style={{fontSize:13,fontWeight:700,color:col.light,marginBottom:4,display:"flex",alignItems:"center",gap:6}}>
-                  {C_ICONS[c]} {C_LABELS[c]}
-                </div>
-                <div style={{fontSize:10,padding:"2px 7px",borderRadius:4,display:"inline-block",marginBottom:10,
-                  background:typeColor+"22",color:typeColor,border:`1px solid ${typeColor}44`}}>
-                  {CRIT_TYPE_LABEL[type].short} · {CRIT_TYPE_LABEL[type].hint}
-                </div>
-
-                {isPctDirect ? (
-                  <div style={{background:"#cc5de818",border:"1px solid #cc5de844",borderRadius:8,
-                    padding:"10px 12px",textAlign:"center"}}>
-                    <div style={{fontSize:12,color:"#cc5de8",fontWeight:700,marginBottom:3}}>% Directo</div>
-                    <div style={{fontSize:11,color:"#8080b0"}}>
-                      La maestra asigna el porcentaje directamente<br/>
-                      al calificar (0 al {w[c]}%)
-                    </div>
-                    <div style={{fontSize:10,color:"#5050a0",marginTop:6}}>No requiere configuración aquí</div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <input type="number" min={1} max={9999} step={1}
-                        value={val} placeholder="Total..."
-                        onChange={e=>setVal(c,e.target.value)}
-                        style={{flex:1,background:"#0d0d1a",border:`1px solid ${hasVal?col.accent+"66":"#2d2d4e"}`,borderRadius:8,
-                          color:"#e8e8f0",padding:"10px 12px",fontSize:16,textAlign:"center",fontWeight:700,outline:"none"}}/>
-                      <span style={{fontSize:12,color:col.accent,fontWeight:600,flexShrink:0}}>
-                        {CRIT_TYPE_LABEL[type].inputLabel}
-                      </span>
-                    </div>
-                    {hasVal && (
-                      <div style={{marginTop:8,fontSize:11,color:col.light,textAlign:"center"}}>
-                        Ej: {Math.round(parseInt(val)*0.75)}/{val} = <strong style={{color:"#51cf66"}}>
-                          {((Math.round(parseInt(val)*0.75)/parseInt(val))*(w[c]||0)).toFixed(1)}%
-                        </strong> de {w[c]}%
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Actions */}
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:24}}>
-        <Btn onClick={save}>💾 Guardar {subject} · Bimestre {bimestre}</Btn>
-        <Btn onClick={copyToAll} variant="secondary">📋 Aplicar a todos los bimestres</Btn>
-        <Btn onClick={()=>{
-          setLocal({tareas:"",trabajos:"",disciplina:"",examen:""});
-          showToast("Campos limpiados (sin guardar)");
-        }} variant="secondary">🗑️ Limpiar</Btn>
-      </div>
-
-      {/* Summary table */}
-      <Card style={{background:"#12122a"}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#c0c0e0",marginBottom:12}}>
-          📋 Resumen de máximos configurados — {subject}
-        </div>
-        <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",minWidth:360}}>
-            <thead>
-              <tr style={{background:"#0d0d1a"}}>
-                <th style={{...TH,textAlign:"left"}}>Criterio</th>
-                {bims.map(b=>(
-                  <th key={b} style={{...TH,color:bimestre===b?col.accent:"#8080b0"}}>
-                    Bim. {b}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {CRITERIA.map(c=>(
-                <tr key={c} style={{borderBottom:"1px solid #1d1d38"}}>
-                  <td style={{...TD,textAlign:"left",color:col.accent,fontWeight:600,paddingLeft:8,fontSize:12}}>
-                    {C_ICONS[c]} {C_LABELS[c]}
-                    <span style={{fontSize:9,marginLeft:5,color:"#5050a0"}}>
-                      {CRIT_TYPE_LABEL[CRIT_TYPE[c]].short}
-                    </span>
-                  </td>
-                  {bims.map(b=>{
-                    if (CRIT_TYPE[c] === "pct_directo") {
-                      return (
-                        <td key={b} style={TD}>
-                          <span style={{fontSize:10,color:"#cc5de8"}}>% dir.</span>
-                        </td>
-                      );
-                    }
-                    const v = totals[`${subject}-${b}-${c}`];
-                    return (
-                      <td key={b} style={{...TD,fontWeight:v?700:400}}>
-                        {v
-                          ? <span style={{color:"#51cf66"}}>{v} {CRIT_TYPE_LABEL[CRIT_TYPE[c]].inputLabel}</span>
-                          : <span style={{color:"#3d3d60",fontSize:11}}>—</span>}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div style={{marginTop:10,fontSize:11,color:"#5050a0",display:"flex",gap:16,flexWrap:"wrap"}}>
-          <span><span style={{color:"#51cf66"}}>●</span> Con máximo = modo aciertos</span>
-          <span><span style={{color:"#3d3d60"}}>●</span> Directo = captura 0–10</span>
-        </div>
-      </Card>
-    </div>
-  );
+function saveApiUrl() {
+  const url = document.getElementById('apiUrlInput').value.trim();
+  if (!url) { showToast('Ingresa una URL válida','warning'); return; }
+  localStorage.setItem(API_URL_KEY, url);
+  document.getElementById('apiUrlStatus').textContent = '✅ URL guardada';
+  showToast('✅ URL guardada — iniciando sync…','success');
+  updateLoginScreen();
+  if (syncIntervalId) clearInterval(syncIntervalId);
+  doSync();
+  syncIntervalId = setInterval(() => doSync(), 60000);
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: REPORTES                                                 */
-/* ══════════════════════════════════════════════════════════════ */
-function TabReportes({config, students, grades, weights, schoolLogo}) {
-  const [subject,  setSubject]  = useState("all");
-  const [bimestre, setBimestre] = useState("all");
-  const [sortBy,   setSortBy]   = useState("name");
+/* ─── URL Modal ─────────────────────────────────────────── */
+function showUrlModal() {
+  document.getElementById('modalUrlInput').value = getApiUrl();
+  document.getElementById('urlModal').classList.add('show');
+}
+function closeUrlModal() {
+  document.getElementById('urlModal').classList.remove('show');
+}
+function saveApiUrlFromModal() {
+  const url = document.getElementById('modalUrlInput').value.trim();
+  if (!url) { closeUrlModal(); return; }
+  localStorage.setItem(API_URL_KEY, url);
+  closeUrlModal();
+  updateLoginScreen();
+  showToast('✅ URL configurada','success');
+}
+document.getElementById('urlModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('urlModal')) closeUrlModal();
+});
 
-  const bims = Array.from({length:config.numBimestres},(_,i)=>i+1);
-
-  const getAvg = (sid,sub,bim) => calcAvg(grades[`${sid}-${sub}-${bim}`], weights[`${sub}-${bim}`]||DEF_W);
-
-  const getFinal = sid => {
-    if (subject!=="all" && bimestre!=="all") return getAvg(sid,subject,parseInt(bimestre));
-    if (subject!=="all") {
-      const a=bims.map(b=>getAvg(sid,subject,b)).filter(v=>v!==null);
-      return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
-    }
-    if (bimestre!=="all") {
-      const a=SUBJECTS.map(s=>getAvg(sid,s,parseInt(bimestre))).filter(v=>v!==null);
-      return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
-    }
-    const a=SUBJECTS.flatMap(s=>bims.map(b=>getAvg(sid,s,b))).filter(v=>v!==null);
-    return a.length? Math.round(a.reduce((x,y)=>x+y,0)/a.length*100)/100:null;
-  };
-
-  let sorted=[...students];
-  if (sortBy==="asc") sorted.sort((a,b)=>(getFinal(a.id)??99)-(getFinal(b.id)??99));
-  else if (sortBy==="desc") sorted.sort((a,b)=>(getFinal(b.id)??-1)-(getFinal(a.id)??-1));
-  else sorted.sort((a,b)=>a.name.localeCompare(b.name));
-
-  const allA=sorted.map(s=>getFinal(s.id)).filter(v=>v!==null);
-  const groupAvg=allA.length? Math.round(allA.reduce((a,b)=>a+b,0)/allA.length*100)/100:null;
-
-  const dist={MB:0,B:0,S:0,NS:0};
-  sorted.forEach(s=>{const v=getFinal(s.id);if(v!==null)dist[getGrade(v).label]++;});
-
-  /* ── Título dinámico según filtros ── */
-  const reportTitle = () => {
-    const parts = [];
-    if (subject !== "all") parts.push(subject);
-    else parts.push("Todas las materias");
-    if (bimestre !== "all") parts.push(`Bimestre ${bimestre}`);
-    else parts.push("Todos los bimestres");
-    return parts.join(" · ");
-  };
-
-  /* ── Columnas dinámicas según filtros ── */
-  const buildColumns = () => {
-    if (subject === "all") return SUBJECTS.map(s => ({ key: s, label: s }));
-    if (bimestre === "all") return bims.map(b => ({ key: b, label: `Bim. ${b}` }));
-    return [];
-  };
-  const cols = buildColumns();
-
-  const getCellVal = (sid, col) => {
-    if (subject === "all") return (() => {
-      if (bimestre === "all") {
-        const x = bims.map(b=>getAvg(sid,col.key,b)).filter(v=>v!==null);
-        return x.length ? Math.round(x.reduce((a,b)=>a+b,0)/x.length*100)/100 : null;
-      }
-      return getAvg(sid, col.key, parseInt(bimestre));
-    })();
-    if (bimestre === "all") return getAvg(sid, subject, col.key);
-    return null;
-  };
-
-  const gradeColor = v => v>=7?"#1a7a3a":v>=6?"#a07800":"#c0000088";
-  const gradeColorPrint = v => v>=7?"#16a34a":v>=6?"#ca8a04":"#dc2626";
-
-  /* ══ IMPRIMIR ══ */
-  const printReport = () => {
-    const win = window.open("","_blank","width=900,height=700");
-    if (!win) { alert("Activa las ventanas emergentes para imprimir."); return; }
-
-    const logoHtml = schoolLogo
-      ? `<img src="${schoolLogo}" style="width:70px;height:70px;border-radius:12px;object-fit:cover;border:1px solid #ccc;" />`
-      : `<div style="width:70px;height:70px;border-radius:12px;background:#e8eaf6;display:flex;align-items:center;justify-content:center;font-size:32px;">🏫</div>`;
-
-    // Build table header
-    const thStyle = `style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;"`;
-    const tdStyle = (v=null) => {
-      const c = v!==null ? (v>=7?"#dcfce7":v>=6?"#fef9c3":"#fee2e2") : "#f8fafc";
-      return `style="border:1px solid #ddd;padding:6px 8px;text-align:center;background:${c};font-size:12px;"`;
-    };
-
-    let thead = `<tr><th ${thStyle} style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;">#</th>
-      <th ${thStyle} style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:left;">Alumno</th>`;
-    cols.forEach(c => {
-      thead += `<th style="border:1px solid #ccc;padding:7px 10px;background:#1e293b;color:#fff;font-size:11px;text-align:center;">${c.label}</th>`;
-    });
-    thead += `<th style="border:1px solid #ccc;padding:7px 10px;background:#0f172a;color:#60efff;font-size:12px;font-weight:800;text-align:center;">PROMEDIO</th></tr>`;
-
-    let tbody = "";
-    sorted.forEach((s,i) => {
-      const final = getFinal(s.id);
-      const rowBg = i%2===0 ? "#fff" : "#f8fafc";
-      tbody += `<tr style="background:${rowBg};">
-        <td style="border:1px solid #ddd;padding:6px 8px;text-align:center;color:#888;font-size:12px;">${i+1}</td>
-        <td style="border:1px solid #ddd;padding:6px 8px;text-align:left;font-weight:600;font-size:12px;">${s.name}</td>`;
-      cols.forEach(col => {
-        const v = getCellVal(s.id, col);
-        tbody += `<td ${tdStyle(v)}>${v!==null?v.toFixed(1):"—"}</td>`;
-      });
-      const badge = final!==null ? getGrade(final).label : "";
-      const finalBg = final!==null ? (final>=7?"#dcfce7":final>=6?"#fef9c3":"#fee2e2") : "#f8fafc";
-      const finalC  = final!==null ? gradeColorPrint(final) : "#999";
-      tbody += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;background:${finalBg};font-weight:800;font-size:13px;color:${finalC};">
-        ${final!==null ? `${final.toFixed(1)} <span style="font-size:10px;background:${finalBg};border:1px solid ${finalC}44;border-radius:3px;padding:1px 4px;">${badge}</span>` : "—"}
-      </td></tr>`;
-    });
-
-    // Group avg row
-    let groupRow = `<tr style="background:#f0f4ff;font-weight:700;">
-      <td colspan="2" style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right;color:#334155;">Promedio del grupo →</td>`;
-    cols.forEach(col => {
-      if (subject === "all") {
-        const avgs = sorted.map(s=>getCellVal(s.id,col)).filter(v=>v!==null);
-        const avg  = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
-        groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-size:12px;">${avg!==null?avg.toFixed(1):"—"}</td>`;
-      } else {
-        const avgs = sorted.map(s=>getAvg(s.id,subject,col.key)).filter(v=>v!==null);
-        const avg  = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
-        groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-size:12px;">${avg!==null?avg.toFixed(1):"—"}</td>`;
-      }
-    });
-    groupRow += `<td style="border:1px solid #ddd;padding:6px 8px;text-align:center;font-weight:800;font-size:13px;color:#1e40af;">${groupAvg!==null?groupAvg.toFixed(1):"—"}</td></tr>`;
-
-    // Distribution badges
-    const distHtml = [["MB","#16a34a","Muy Bien"],["B","#2563eb","Bien"],["S","#ca8a04","Suficiente"],["NS","#dc2626","No Suficiente"]]
-      .map(([l,c,d]) => `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:12px;color:#555;">
-        <strong style="background:${c}22;color:${c};border:1px solid ${c}44;border-radius:4px;padding:2px 8px;">${l}</strong>
-        ${dist[l]} alumnos — ${d}
-      </span>`).join("");
-
-    win.document.write(`<!DOCTYPE html><html lang="es"><head>
-      <meta charset="UTF-8"/>
-      <title>Reporte — ${config.schoolName||"Escuela"}</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; color: #1e293b; padding: 20px; }
-        @media print {
-          body { padding: 10px; }
-          .no-print { display: none !important; }
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; }
-          @page { margin: 15mm; size: landscape; }
-        }
-        table { border-collapse: collapse; width: 100%; }
-      </style>
-    </head><body>
-      <!-- Botón imprimir -->
-      <div class="no-print" style="margin-bottom:16px;display:flex;gap:10px;">
-        <button onclick="window.print()" style="background:#1e293b;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
-          🖨️ Imprimir / Guardar PDF
-        </button>
-        <button onclick="window.close()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer;">
-          ✕ Cerrar
-        </button>
-      </div>
-
-      <!-- Encabezado -->
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #1e293b;">
-        ${logoHtml}
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:800;color:#0f172a;">${config.schoolName||"Sistema de Calificaciones"}</div>
-          <div style="font-size:13px;color:#475569;margin-top:2px;">
-            Ciclo ${config.year||""} &nbsp;·&nbsp; Grado: ${config.grade||""} &nbsp;·&nbsp; Grupo: ${config.group||""}
-          </div>
-          <div style="font-size:15px;font-weight:700;color:#1e40af;margin-top:4px;">
-            📊 ${reportTitle()}
-          </div>
-        </div>
-        <div style="text-align:right;font-size:11px;color:#94a3b8;">
-          Generado: ${new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"})}<br/>
-          Total alumnos: ${sorted.length}
-          ${groupAvg!==null?`<br/><strong style="color:#1e40af;">Promedio grupo: ${groupAvg.toFixed(1)}</strong>`:""}
-        </div>
-      </div>
-
-      <!-- Tabla -->
-      <table><thead>${thead}</thead><tbody>${tbody}${groupRow}</tbody></table>
-
-      <!-- Distribución -->
-      <div style="margin-top:16px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-        <strong style="font-size:12px;color:#334155;margin-right:12px;">Distribución:</strong>
-        ${distHtml}
-      </div>
-
-      <!-- Leyenda -->
-      <div style="margin-top:10px;font-size:11px;color:#94a3b8;">
-        MB = Muy Bien (9–10) &nbsp;·&nbsp; B = Bien (7–8.9) &nbsp;·&nbsp; S = Suficiente (6–6.9) &nbsp;·&nbsp; NS = No Suficiente (&lt;6)
-      </div>
-    </body></html>`);
-    win.document.close();
-  };
-
-  /* ── Excel export ── */
-  const exportExcel = () => {
-    if (typeof XLSX === "undefined") { alert("SheetJS no cargó. Verifica tu conexión."); return; }
-    const wb = XLSX.utils.book_new();
-
-    // ── Hoja 1: Resumen general ──
-    const summaryData = [
-      [`Sistema de Calificaciones — ${config.schoolName||"Escuela"}`],
-      [`Ciclo: ${config.year} | Grado: ${config.grade} | Grupo: ${config.group}`],
-      [],
-      ["#","Alumno", ...SUBJECTS.flatMap(s=> bims.map(b=>`${s} B${b}`)), "PROMEDIO FINAL"],
-    ];
-    sorted.forEach((s,i)=>{
-      const row = [i+1, s.name];
-      SUBJECTS.forEach(sub=>{
-        bims.forEach(b=>{
-          const v = getAvg(s.id,sub,b);
-          row.push(v!==null ? parseFloat(v.toFixed(2)) : "");
-        });
-      });
-      const final = getFinal(s.id);
-      row.push(final!==null ? parseFloat(final.toFixed(2)) : "");
-      summaryData.push(row);
-    });
-    // Fila de promedios del grupo
-    summaryData.push([]);
-    const groupRow = ["","PROMEDIO GRUPO"];
-    SUBJECTS.forEach(sub=>{
-      bims.forEach(b=>{
-        const avgs = sorted.map(s=>getAvg(s.id,sub,b)).filter(v=>v!==null);
-        groupRow.push(avgs.length ? parseFloat((avgs.reduce((a,x)=>a+x,0)/avgs.length).toFixed(2)) : "");
-      });
-    });
-    groupRow.push(groupAvg!==null ? parseFloat(groupAvg.toFixed(2)) : "");
-    summaryData.push(groupRow);
-
-    const wsSum = XLSX.utils.aoa_to_sheet(summaryData);
-    // Column widths
-    wsSum["!cols"] = [
-      {wch:4},{wch:28},
-      ...SUBJECTS.flatMap(()=>bims.map(()=>({wch:10}))),
-      {wch:14}
-    ];
-    XLSX.utils.book_append_sheet(wb, wsSum, "Resumen");
-
-    // ── Hoja por cada materia ──
-    SUBJECTS.forEach(sub=>{
-      const subData = [
-        [`${sub} — ${config.schoolName||"Escuela"} ${config.year} Grado ${config.grade} Grupo ${config.group}`],
-        [],
-        ["#","Alumno", ...bims.map(b=>`Bimestre ${b}`), "PROMEDIO"],
-        ...sorted.map((s,i)=>{
-          const bimVals = bims.map(b=>{ const v=getAvg(s.id,sub,b); return v!==null?parseFloat(v.toFixed(2)):""; });
-          const filled  = bimVals.filter(v=>v!=="");
-          const avg     = filled.length ? parseFloat((filled.reduce((a,x)=>a+x,0)/filled.length).toFixed(2)) : "";
-          return [i+1, s.name, ...bimVals, avg];
-        }),
-        [],
-        ["","PROMEDIO GRUPO",
-          ...bims.map(b=>{
-            const avgs=sorted.map(s=>getAvg(s.id,sub,b)).filter(v=>v!==null);
-            return avgs.length?parseFloat((avgs.reduce((a,x)=>a+x,0)/avgs.length).toFixed(2)):"";
-          }),
-          ""
-        ],
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(subData);
-      ws["!cols"] = [{wch:4},{wch:28},...bims.map(()=>({wch:12})),{wch:12}];
-      XLSX.utils.book_append_sheet(wb, ws, sub.substring(0,31));
-    });
-
-    // ── Hoja por bimestre (detalle por criterio) ──
-    bims.forEach(b=>{
-      const bimData = [
-        [`Bimestre ${b} — Detalle por criterio`],
-        [],
-        ["#","Alumno",
-          ...SUBJECTS.flatMap(sub=>CRITERIA.map(c=>`${sub.slice(0,3)}-${C_LABELS[c].slice(0,4)}`)),
-          ...SUBJECTS.map(sub=>`Prom. ${sub}`),
-          "PROMEDIO BIM"
-        ],
-      ];
-      sorted.forEach((s,i)=>{
-        const row=[i+1,s.name];
-        SUBJECTS.forEach(sub=>{
-          CRITERIA.forEach(c=>{
-            const g=grades[`${s.id}-${sub}-${b}`];
-            const v=g?.[c];
-            row.push(v!==undefined&&v!==""?parseFloat(parseFloat(v).toFixed(2)):"");
-          });
-        });
-        SUBJECTS.forEach(sub=>{ const v=getAvg(s.id,sub,b); row.push(v!==null?parseFloat(v.toFixed(2)):""); });
-        const bimAvg=SUBJECTS.map(sub=>getAvg(s.id,sub,b)).filter(v=>v!==null);
-        row.push(bimAvg.length?parseFloat((bimAvg.reduce((a,x)=>a+x,0)/bimAvg.length).toFixed(2)):"");
-        bimData.push(row);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(bimData);
-      XLSX.utils.book_append_sheet(wb, ws, `Bimestre ${b}`);
-    });
-
-    const fname = `Calificaciones_${config.year}_${config.grade}_Grupo${config.group}_${new Date().toISOString().slice(0,10)}.xlsx`;
-    XLSX.writeFile(wb, fname);
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>📊 Reportes y Promedios</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:16}}>Consulta promedios por alumno, materia y bimestre.</p>
-
-      {/* Botones de exportar */}
-      <div style={{marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-        <Btn onClick={exportExcel} disabled={students.length===0}
-          style={{background:"linear-gradient(135deg,#1e6f3e,#27a356)",boxShadow:"0 3px 12px #1e6f3e55",display:"inline-flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:16}}>⬇️</span>
-          Descargar Excel
-          <span style={{fontSize:11,opacity:.8,fontWeight:400}}>(.xlsx)</span>
-        </Btn>
-        <Btn onClick={printReport} disabled={students.length===0}
-          style={{background:"linear-gradient(135deg,#1a1a3e,#2d3a6e)",border:"1px solid #4361ee66",boxShadow:"0 3px 12px #4361ee33",display:"inline-flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:16}}>🖨️</span>
-          Imprimir reporte
-          <span style={{fontSize:11,opacity:.8,fontWeight:400}}>PDF / papel</span>
-        </Btn>
-      </div>
-      <div style={{fontSize:11,color:"#5050a0",marginBottom:16}}>
-        El reporte impreso refleja los filtros activos de materia y bimestre seleccionados abajo.
-      </div>
-
-      {/* Filters */}
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20,alignItems:"flex-end"}}>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Materia</div>
-          <Sel value={subject} onChange={e=>setSubject(e.target.value)}>
-            <option value="all">Todas las materias</option>
-            {SUBJECTS.map(s=><option key={s} value={s}>{s}</option>)}
-          </Sel>
-        </div>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Bimestre</div>
-          <Sel value={bimestre} onChange={e=>setBimestre(e.target.value)}>
-            <option value="all">Todos</option>
-            {bims.map(b=><option key={b} value={b}>Bimestre {b}</option>)}
-          </Sel>
-        </div>
-        <div>
-          <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Ordenar</div>
-          <Sel value={sortBy} onChange={e=>setSortBy(e.target.value)}>
-            <option value="name">Nombre A-Z</option>
-            <option value="desc">Mayor promedio</option>
-            <option value="asc">Menor promedio</option>
-          </Sel>
-        </div>
-        {groupAvg!==null && (
-          <Card style={{marginLeft:"auto",textAlign:"center",padding:"8px 20px",background:"#1a1a3e"}}>
-            <div style={{fontSize:11,color:"#7070a0"}}>Promedio del grupo</div>
-            <div style={{fontSize:22,fontWeight:800,color:groupAvg>=7?"#51cf66":"#ff6b6b"}}>{groupAvg.toFixed(1)}</div>
-          </Card>
-        )}
-      </div>
-
-      {/* Distribution */}
-      {students.length>0 && (
-        <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-          {[["MB","#51cf66"],["B","#4dabf7"],["S","#ffd43b"],["NS","#ff6b6b"]].map(([l,c])=>(
-            <Card key={l} style={{flex:1,minWidth:80,textAlign:"center",padding:"10px 8px",background:"#12122a",borderColor:c+"44"}}>
-              <div style={{fontSize:20,fontWeight:800,color:c}}>{dist[l]}</div>
-              <div style={{fontSize:11,color:c,fontWeight:700}}>{l}</div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {students.length===0 ? (
-        <Card style={{textAlign:"center",padding:40,color:"#7070a0"}}>No hay alumnos registrados.</Card>
-      ) : (
-        <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",minWidth:600}}>
-            <thead>
-              <tr style={{background:"#12122a"}}>
-                <th style={{...TH,textAlign:"left",width:36}}>#</th>
-                <th style={{...TH,textAlign:"left"}}>Alumno</th>
-                {subject==="all" ? (
-                  SUBJECTS.map(s=>(
-                    <th key={s} style={{...TH,color:SUB_COLOR[s].accent}}>{s}</th>
-                  ))
-                ) : bimestre==="all" ? (
-                  bims.map(b=><th key={b} style={TH}>Bim. {b}</th>)
-                ) : null}
-                <th style={{...TH,color:"#4361ee",fontSize:14}}>PROMEDIO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((s,i)=>{
-                const final=getFinal(s.id);
-                return (
-                  <tr key={s.id} style={{borderBottom:"1px solid #1d1d38",background:i%2===0?"#0d0d1a":"#0f0f22"}}>
-                    <td style={{...TD,color:"#5050a0"}}>{i+1}</td>
-                    <td style={{...TD,textAlign:"left",fontWeight:500}}>{s.name}</td>
-                    {subject==="all" ? (
-                      SUBJECTS.map(sub=>{
-                        const a = bimestre==="all"
-                          ? (()=>{const x=bims.map(b=>getAvg(s.id,sub,b)).filter(v=>v!==null);return x.length?Math.round(x.reduce((a,b)=>a+b,0)/x.length*100)/100:null;})()
-                          : getAvg(s.id,sub,parseInt(bimestre));
-                        return (
-                          <td key={sub} style={TD}>
-                            {a!==null
-                              ? <span style={{color:a>=7?"#51cf66":a>=6?"#ffd43b":"#ff6b6b",fontWeight:600}}>{a.toFixed(1)}</span>
-                              : <span style={{color:"#3d3d60"}}>–</span>}
-                          </td>
-                        );
-                      })
-                    ) : bimestre==="all" ? (
-                      bims.map(b=>{
-                        const a=getAvg(s.id,subject,b);
-                        return (
-                          <td key={b} style={TD}>
-                            {a!==null
-                              ? <span style={{color:a>=7?"#51cf66":a>=6?"#ffd43b":"#ff6b6b",fontWeight:600}}>{a.toFixed(1)}</span>
-                              : <span style={{color:"#3d3d60"}}>–</span>}
-                          </td>
-                        );
-                      })
-                    ) : null}
-                    <td style={{...TD,fontWeight:800,fontSize:15}}>
-                      {final!==null
-                        ? <span style={{color:final>=7?"#51cf66":final>=6?"#ffd43b":"#ff6b6b"}}>
-                            {final.toFixed(1)} <Badge value={final}/>
-                          </span>
-                        : <span style={{color:"#3d3d60"}}>–</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div style={{display:"flex",gap:16,marginTop:16,flexWrap:"wrap"}}>
-        {[["MB","#51cf66","Muy Bien (9-10)"],["B","#4dabf7","Bien (7-8.9)"],["S","#ffd43b","Suficiente (6-6.9)"],["NS","#ff6b6b","No Suficiente (<6)"]].map(([l,c,d])=>(
-          <div key={l} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#7070a0"}}>
-            <span style={{background:c+"22",color:c,border:`1px solid ${c}44`,borderRadius:4,padding:"1px 6px",fontWeight:700}}>{l}</span>{d}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+/* ═══════════════════════════════════════════════════════════════
+   UTILIDADES
+═══════════════════════════════════════════════════════════════ */
+function uid() {
+  return Math.random().toString(36).slice(2,9) + Date.now().toString(36);
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* ══════════════════════════════════════════════════════════════ */
-/*  TAB: SINCRONIZAR                                              */
-/* ══════════════════════════════════════════════════════════════ */
-function TabSync({syncStatus, lastSync, onPull, onPush,
-                  students, grades, weights, totals, rawGrades, schoolLogo}) {
-
-  const isActive     = GAS_URL && !GAS_URL.includes("XXXX");
-  const statusColor  = syncStatus==="ok"?"#51cf66":syncStatus==="err"?"#ff6b6b":syncStatus==="syncing"?"#ffd43b":"#4361ee";
-  const statusLabel  = syncStatus==="ok" ? `Sincronizado · ${lastSync||""}`
-                     : syncStatus==="err"     ? "Error de conexión"
-                     : syncStatus==="syncing" ? "Sincronizando…"
-                     : isActive               ? `Conectado · ${lastSync||"pendiente"}`
-                     :                          "URL no configurada en el código";
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>☁️ Sincronización Automática</h2>
-      <p style={{color:"#7070a0",fontSize:13,marginBottom:20}}>
-        Los datos se sincronizan en automático entre todos los dispositivos. No se configura en cada dispositivo —
-        el URL está integrado en la aplicación y se actualiza publicando una nueva versión en GitHub.
-      </p>
-
-      {/* Estado */}
-      <Card style={{marginBottom:20,background:isActive?"#0d1a0d":"#1a1a2e",
-        borderColor:statusColor+"44"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-          <div style={{fontSize:42}}>{syncStatus==="err"?"⚠️":isActive?"☁️":"🔌"}</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:15,fontWeight:800,color:statusColor,marginBottom:4}}>
-              {isActive ? "Sincronización activa" : "URL pendiente de configurar"}
-            </div>
-            <div style={{fontSize:12,color:"#6060a0",lineHeight:1.6}}>
-              {statusLabel}
-              {isActive && " · Auto-sync cada 2 min · Push automático al guardar"}
-            </div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
-            <div style={{width:12,height:12,borderRadius:"50%",background:statusColor,
-              animation:syncStatus==="syncing"?"pulse 1s infinite":undefined}}/>
-            <div style={{fontSize:10,color:statusColor,fontWeight:700,whiteSpace:"nowrap"}}>
-              {syncStatus==="syncing"?"Sync...":syncStatus==="ok"?"OK":syncStatus==="err"?"Error":isActive?"En línea":"—"}
-            </div>
-          </div>
-        </div>
-
-        {isActive && (
-          <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
-            <Btn onClick={onPull} style={{fontSize:13,padding:"8px 18px"}}>⬇️ Actualizar ahora</Btn>
-            <Btn onClick={onPush} variant="secondary" style={{fontSize:13,padding:"8px 18px"}}>⬆️ Forzar subida</Btn>
-          </div>
-        )}
-      </Card>
-
-      {/* Info para el admin */}
-      <Card style={{marginBottom:16,background:"#12122a"}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#c0c0e0",marginBottom:12}}>⚙️ Cómo actualizar el backend</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {[
-            ["🔧","Edita el archivo <code>index.html</code> en GitHub y cambia el valor de <code>GAS_URL</code>"],
-            ["📤","Para redesplegar Apps Script: Implementar → Administrar implementaciones → ✏️ editar → Nueva versión → Actualizar"],
-            ["✅","Al guardar una nueva versión el Apps Script conserva el mismo URL — no hay que cambiarlo"],
-            ["🌐","Todos los dispositivos reciben el cambio automáticamente la próxima vez que abren la app"],
-          ].map(([icon,text],i)=>(
-            <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <span style={{fontSize:16,flexShrink:0}}>{icon}</span>
-              <span style={{fontSize:12,color:"#7070a0",lineHeight:1.5}} dangerouslySetInnerHTML={{__html:text}}/>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Datos locales */}
-      <Card style={{background:"#12122a"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:10,color:"#c0c0e0"}}>📋 Datos en este dispositivo</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
-          {[
-            ["👥 Alumnos",     students.length],
-            ["📊 Registros",   Object.keys(grades).length],
-            ["⚖️ Porcentajes", Object.keys(weights).length],
-            ["🎯 Máximos",     Object.keys(totals).length],
-            ["🖼️ Logotipo",   schoolLogo?"✓ Sí":"✗ No"],
-          ].map(([label,val])=>(
-            <div key={label} style={{background:"#1a1a2e",borderRadius:8,padding:"10px 14px"}}>
-              <div style={{fontSize:11,color:"#7070a0"}}>{label}</div>
-              <div style={{fontSize:18,fontWeight:700,color:"#4361ee"}}>{val}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
+let toastTimer = null;
+function showToast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show ' + type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
 }
-
-
-function TabUsuarios({ showToast }) {
-  const getUsers = () => LS.get("sys_users") || DEFAULT_USERS;
-  const [users,   setUsers]   = useState(getUsers);
-  const [editId,  setEditId]  = useState(null);
-  const [newPass, setNewPass] = useState("");
-  const [showNew, setShowNew] = useState(false);
-  const [form,    setForm]    = useState({ username:"", name:"", password:"", role:"docente" });
-  const [showFormPass, setShowFormPass] = useState(false);
-  const [confirmDel, setConfirmDel] = useState(null);
-
-  const save = (u) => { LS.set("sys_users", u); setUsers(u); };
-
-  const toggleActive = (id) => {
-    const current = users.find(u=>u.id===id);
-    if (current?.role==="masteradmin" && users.filter(u=>u.role==="masteradmin"&&u.active).length<=1) {
-      showToast("Debe existir al menos un Master Admin activo","err"); return;
-    }
-    save(users.map(u=>u.id===id?{...u,active:!u.active}:u));
-    showToast("Estado actualizado ✓");
-  };
-
-  const changePass = (id) => {
-    if (newPass.length < 6) { showToast("La contraseña debe tener al menos 6 caracteres","err"); return; }
-    save(users.map(u=>u.id===id?{...u,passHash:hashStr(newPass)}:u));
-    setEditId(null); setNewPass(""); showToast("Contraseña actualizada ✓");
-  };
-
-  const addUser = () => {
-    if (!form.username.trim()||!form.name.trim()||!form.password.trim())
-      { showToast("Completa todos los campos","err"); return; }
-    if (form.password.length<6) { showToast("Contraseña mínima 6 caracteres","err"); return; }
-    if (users.find(u=>u.username.toLowerCase()===form.username.toLowerCase()))
-      { showToast("Ese usuario ya existe","err"); return; }
-    const newUser = { id:uid(), username:form.username.trim(), name:form.name.trim(),
-      passHash:hashStr(form.password), role:form.role, active:true };
-    save([...users, newUser]);
-    setForm({username:"",name:"",password:"",role:"docente"});
-    setShowNew(false);
-    showToast(`Usuario "${newUser.name}" creado ✓`);
-  };
-
-  const delUser = (id) => {
-    const u = users.find(x=>x.id===id);
-    if (u?.role==="masteradmin" && users.filter(x=>x.role==="masteradmin"&&x.active).length<=1)
-      { showToast("No puedes eliminar el único Master Admin","err"); setConfirmDel(null); return; }
-    save(users.filter(x=>x.id!==id));
-    showToast(`"${u?.name}" eliminado`); setConfirmDel(null);
-  };
-
-  return (
-    <div>
-      <h2 style={{marginBottom:6,fontSize:18}}>🔑 Gestión de Usuarios</h2>
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:20}}>
-        <p style={{color:"#7070a0",fontSize:13,flex:1}}>Administra los accesos al sistema. Solo el Master Admin puede ver esta sección.</p>
-        <Btn onClick={()=>setShowNew(p=>!p)} variant={showNew?"secondary":"primary"}>
-          {showNew?"✕ Cancelar":"➕ Nuevo Usuario"}
-        </Btn>
-      </div>
-
-      {/* Formulario nuevo usuario */}
-      {showNew && (
-        <Card style={{marginBottom:20,borderColor:"#4361ee44"}}>
-          <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:"#c0c0e0"}}>➕ Crear Nuevo Usuario</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,marginBottom:12}}>
-            <div>
-              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Nombre completo</div>
-              <Inp value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Nombre Apellido"/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Usuario (sin espacios)</div>
-              <Inp value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value.replace(/\s/g,"")}))} placeholder="nombreusuario"/>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Contraseña (mín. 6 caracteres)</div>
-              <div style={{position:"relative"}}>
-                <Inp type={showFormPass?"text":"password"} value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder="••••••••"/>
-                <button onClick={()=>setShowFormPass(p=>!p)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#7070a0"}}>
-                  {showFormPass?"🙈":"👁️"}
-                </button>
-              </div>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"#7070a0",marginBottom:5}}>Perfil</div>
-              <Sel value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
-                <option value="docente">👩‍🏫 Docente</option>
-                <option value="masteradmin">🛡️ Master Admin</option>
-              </Sel>
-            </div>
-          </div>
-          <Btn onClick={addUser} variant="success">✓ Crear Usuario</Btn>
-        </Card>
-      )}
-
-      {/* Lista de usuarios */}
-      <div style={{display:"grid",gap:10}}>
-        {users.map(u => {
-          const rc = ROLE_COLORS[u.role];
-          return (
-            <Card key={u.id} style={{border:`1px solid ${u.active?rc+"33":"#3d3d4e"}`,opacity:u.active?1:0.6}}>
-              <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-                {/* Avatar */}
-                <div style={{width:44,height:44,borderRadius:12,background:`${rc}20`,border:`2px solid ${rc}44`,
-                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
-                  {ROLE_ICONS[u.role]}
-                </div>
-                {/* Info */}
-                <div style={{flex:1,minWidth:120}}>
-                  <div style={{fontWeight:700,fontSize:15,color:"#e8e8f0"}}>{u.name}</div>
-                  <div style={{fontSize:12,color:"#7070a0"}}>@{u.username}</div>
-                  <div style={{marginTop:4,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{background:rc+"22",color:rc,border:`1px solid ${rc}44`,
-                      borderRadius:4,fontSize:10,padding:"1px 7px",fontWeight:700}}>
-                      {ROLE_ICONS[u.role]} {ROLE_LABELS[u.role]}
-                    </span>
-                    <span style={{background:u.active?"#51cf6622":"#ff6b6b22",
-                      color:u.active?"#51cf66":"#ff6b6b",
-                      border:`1px solid ${u.active?"#51cf6644":"#ff6b6b44"}`,
-                      borderRadius:4,fontSize:10,padding:"1px 7px",fontWeight:700}}>
-                      {u.active?"● Activo":"○ Inactivo"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Acciones */}
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  {editId===u.id ? (
-                    <>
-                      <div style={{position:"relative"}}>
-                        <Inp type="password" value={newPass} onChange={e=>setNewPass(e.target.value)}
-                          placeholder="Nueva contraseña" style={{width:180}}/>
-                      </div>
-                      <Btn onClick={()=>changePass(u.id)} variant="success" style={{padding:"5px 12px"}}>✓ Guardar</Btn>
-                      <Btn onClick={()=>{setEditId(null);setNewPass("");}} variant="secondary" style={{padding:"5px 10px"}}>✕</Btn>
-                    </>
-                  ) : (
-                    <>
-                      <Btn onClick={()=>setEditId(u.id)} variant="secondary" style={{padding:"6px 10px",fontSize:12}}>🔑 Cambiar contraseña</Btn>
-                      <Btn onClick={()=>toggleActive(u.id)} variant={u.active?"warning":"success"} style={{padding:"6px 10px",fontSize:12}}>
-                        {u.active?"⏸ Desactivar":"▶ Activar"}
-                      </Btn>
-                      <Btn onClick={()=>setConfirmDel(u.id)} variant="danger" style={{padding:"6px 10px"}}>🗑️</Btn>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Leyenda de perfiles */}
-      <Card style={{marginTop:20,background:"#12122a"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:12,color:"#c0c0e0"}}>📋 Permisos por perfil</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div>
-            <div style={{fontSize:12,color:ROLE_COLORS.docente,fontWeight:700,marginBottom:6}}>👩‍🏫 Docente</div>
-            {["✏️ Capturar calificaciones","👥 Gestionar alumnos","📊 Ver reportes"].map(p=>(
-              <div key={p} style={{fontSize:12,color:"#a0a0c0",marginBottom:3}}>✓ {p}</div>
-            ))}
-            {["⚙️ Configuración del sistema","⚖️ Valores de evaluación","☁️ Sincronización","🔑 Gestión de usuarios"].map(p=>(
-              <div key={p} style={{fontSize:12,color:"#4d4d70",marginBottom:3}}>✗ {p}</div>
-            ))}
-          </div>
-          <div>
-            <div style={{fontSize:12,color:ROLE_COLORS.masteradmin,fontWeight:700,marginBottom:6}}>🛡️ Master Admin</div>
-            {["⚙️ Configuración del sistema","👥 Gestionar alumnos","✏️ Capturar calificaciones","⚖️ Valores de evaluación","📊 Ver reportes","☁️ Sincronización","🔑 Gestión de usuarios"].map(p=>(
-              <div key={p} style={{fontSize:12,color:"#a0a0c0",marginBottom:3}}>✓ {p}</div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Confirm delete modal */}
-      {confirmDel && (()=>{
-        const u = users.find(x=>x.id===confirmDel);
-        return (
-          <div style={{position:"fixed",inset:0,background:"#000b",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
-            <Card style={{maxWidth:340,textAlign:"center"}}>
-              <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-              <div style={{fontWeight:700,marginBottom:8}}>¿Eliminar usuario?</div>
-              <div style={{color:"#a0a0c0",fontSize:14,marginBottom:20}}>Se eliminará el acceso de <strong>{u?.name}</strong>.</div>
-              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-                <Btn onClick={()=>delUser(confirmDel)} variant="danger">Sí, eliminar</Btn>
-                <Btn onClick={()=>setConfirmDel(null)} variant="secondary">Cancelar</Btn>
-              </div>
-            </Card>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-/* ── Mount ───────────────────────────────────────────────────── */
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
