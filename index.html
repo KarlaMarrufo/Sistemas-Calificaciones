@@ -198,7 +198,7 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 
 /* ── MODAL ────────────────────────────────────────────────────── */
 .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-  align-items:center; justify-content:center; z-index:8000; padding:20px; }
+  align-items:center; justify-content:center; z-index:10000; padding:20px; }
 .modal-bg.show { display:flex; }
 .modal { background:var(--card); border:1px solid var(--border);
   border-radius:var(--radius2); padding:24px; width:100%; max-width:440px; }
@@ -241,8 +241,18 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
       <h1 id="loginTitle">Sistema de Calificaciones</h1>
       <p id="loginSubtitle">Inicia sesión para continuar</p>
     </div>
-    <div id="loginUrlInfo" class="login-url no-url" onclick="showUrlModal()">
-      ⚠️ Sin conexión configurada — toca para configurar
+    <div id="loginUrlInfo" class="login-url no-url" id="loginUrlInfo">
+      <div id="loginUrlText">⚠️ Sin conexión — ingresa la URL del Apps Script:</div>
+      <div style="display:flex;gap:6px;margin-top:7px;" id="loginUrlForm">
+        <input type="url" id="loginUrlField" placeholder="https://script.google.com/macros/s/.../exec"
+               style="flex:1;font-size:.75rem;padding:6px 8px;"
+               onkeydown="if(event.key==='Enter') saveApiUrlFromLogin()">
+        <button onclick="saveApiUrlFromLogin()"
+                style="background:var(--accent);color:#fff;border:none;border-radius:6px;
+                       padding:6px 10px;cursor:pointer;font-size:.78rem;white-space:nowrap;">
+          Guardar
+        </button>
+      </div>
     </div>
     <div class="field">
       <label>Usuario</label>
@@ -257,6 +267,13 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="loginErr"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <button onclick="resetCredentials()"
+        style="background:none;border:none;color:var(--text3);font-size:.72rem;
+               cursor:pointer;text-decoration:underline;">
+        ¿Problemas para entrar? Restablecer credenciales
+      </button>
+    </div>
   </div>
 </div>
 
@@ -711,6 +728,21 @@ function checkSession() {
   return false;
 }
 
+function resetCredentials() {
+  if (!confirm('Esto restablecerá los usuarios a los valores por defecto.
+
+Usuario: karlamarrufo
+Contraseña: Karla2026
+
+¿Continuar?')) return;
+  localStorage.removeItem(USERS_KEY);
+  // Also clear any old system session keys
+  ['session','sys_users','calif_session','audit_session'].forEach(k => {
+    try { localStorage.removeItem(k); } catch(e){}
+  });
+  showToast('✅ Credenciales restablecidas — usuario: karlamarrufo / Karla2026','success');
+}
+
 function changePassword() {
   const old  = document.getElementById('pwdOld').value;
   const nw   = document.getElementById('pwdNew').value;
@@ -743,15 +775,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+function saveApiUrlFromLogin() {
+  const url = document.getElementById('loginUrlField').value.trim();
+  if (!url) return;
+  localStorage.setItem(API_URL_KEY, url);
+  updateLoginScreen();
+  showToast('✅ URL guardada','success');
+}
+
 function updateLoginScreen() {
   const url = getApiUrl();
-  const info = document.getElementById('loginUrlInfo');
+  const urlText = document.getElementById('loginUrlText');
+  const urlForm = document.getElementById('loginUrlForm');
+  const infoBox = document.getElementById('loginUrlInfo');
   if (url) {
-    info.textContent = '🔗 Conectado: ' + url.slice(0,50) + '…';
-    info.className = 'login-url';
+    if (urlText) urlText.textContent = '🔗 ' + url.slice(0,55) + '…';
+    if (urlForm) urlForm.style.display = 'none';
+    if (infoBox) infoBox.className = 'login-url';
   } else {
-    info.textContent = '⚠️ Sin conexión configurada — toca para configurar';
-    info.className = 'login-url no-url';
+    if (urlText) urlText.textContent = '⚠️ Sin conexión — ingresa la URL del Apps Script:';
+    if (urlForm) urlForm.style.display = 'flex';
+    if (infoBox) infoBox.className = 'login-url no-url';
+    // Pre-fill if there's something in the input
+    const field = document.getElementById('loginUrlField');
+    if (field && !field.value) field.value = '';
   }
   if (STATE.logo) {
     document.getElementById('loginLogo').src = STATE.logo;
