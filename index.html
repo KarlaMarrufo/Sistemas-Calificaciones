@@ -20,72 +20,105 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
 
 /* ── LOGIN ─────────────────────────────────────────── */
-#loginScreen{position:fixed;inset:0;display:flex;align-items:center;
-  justify-content:center;z-index:9999;padding:20px;overflow:hidden;}
+#loginScreen{position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:9999;
+  padding:20px;overflow-y:auto;overflow-x:hidden;
+  background:#0a0d1a;}
 #loginScreen.hidden{display:none;}
 
-/* Fondo animado con partículas */
-.login-bg{position:absolute;inset:0;background:
-  radial-gradient(ellipse at 20% 50%, rgba(37,99,235,.15) 0%, transparent 60%),
-  radial-gradient(ellipse at 80% 20%, rgba(124,58,237,.12) 0%, transparent 50%),
-  radial-gradient(ellipse at 60% 80%, rgba(37,99,235,.08) 0%, transparent 40%),
-  #0d1117;
-  overflow:hidden;}
+/* Fondo cuadrícula exacta como en la imagen */
+.login-bg{position:fixed;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(30,40,100,.18) 0%,transparent 60%),
+    #0a0d1a;}
 .login-bg::before{content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(255,255,255,.01) 60px,rgba(255,255,255,.01) 61px),
-             repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(255,255,255,.01) 60px,rgba(255,255,255,.01) 61px);}
-@keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.05)}}
-@keyframes float2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-25px,15px) scale(.95)}}
-@keyframes float3{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,10px)}66%{transform:translate(-10px,-15px)}}
-.orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;}
-.orb1{width:400px;height:400px;background:rgba(37,99,235,.2);top:-100px;left:-100px;animation:float1 8s ease-in-out infinite;}
-.orb2{width:300px;height:300px;background:rgba(124,58,237,.15);bottom:-80px;right:-80px;animation:float2 10s ease-in-out infinite;}
-.orb3{width:200px;height:200px;background:rgba(37,99,235,.12);top:40%;right:20%;animation:float3 12s ease-in-out infinite;}
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:52px 52px;}
+/* Puntos de luz en las intersecciones */
+.login-bg::after{content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,.12) 1px,transparent 1px);
+  background-size:52px 52px;}
 
-/* Caja de login con animación de entrada */
-@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
-.login-box{position:relative;background:rgba(33,38,45,.92);backdrop-filter:blur(20px);
-  border:1px solid rgba(48,54,61,.8);border-radius:20px;padding:40px 36px;
-  width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.5);
-  animation:slideUp .5s cubic-bezier(.22,.68,0,1.2) both;}
-
-/* Logo */
-@keyframes logoPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
-.login-logo{text-align:center;margin-bottom:28px;}
+/* Logo arriba — fuera de la tarjeta */
+.login-logo-top{text-align:center;margin-bottom:20px;position:relative;z-index:1;}
+@keyframes logoPop{from{opacity:0;transform:scale(.6) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .login-logo-img-wrap{display:inline-flex;align-items:center;justify-content:center;
-  width:72px;height:72px;border-radius:16px;background:rgba(37,99,235,.15);
-  border:1px solid rgba(37,99,235,.3);margin-bottom:14px;
-  animation:logoPop .6s .2s cubic-bezier(.22,.68,0,1.2) both;}
-.login-logo-img-wrap img{width:56px;height:56px;border-radius:10px;object-fit:cover;}
-.login-logo-img-wrap .logo-emoji{font-size:2rem;}
-.login-logo h1{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;}
-.login-logo .login-inst{color:var(--text2);font-size:.82rem;margin-top:5px;
-  display:flex;align-items:center;justify-content:center;gap:5px;}
-.login-logo .login-inst::before,.login-logo .login-inst::after{
-  content:'';flex:1;height:1px;background:var(--border);max-width:50px;}
+  width:88px;height:88px;border-radius:22px;
+  background:linear-gradient(145deg,#1a1f3a,#0f1428);
+  border:1.5px solid rgba(80,100,200,.35);
+  box-shadow:0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);
+  margin-bottom:16px;animation:logoPop .5s .1s cubic-bezier(.22,.68,0,1.2) both;}
+.login-logo-img-wrap img{width:64px;height:64px;border-radius:14px;object-fit:cover;}
+.login-logo-img-wrap .logo-emoji{font-size:2.4rem;}
+.login-school-name{font-size:1.5rem;font-weight:700;color:#e8eaf6;letter-spacing:-.02em;margin-bottom:5px;}
+.login-inst-text{color:#7986cb;font-size:.84rem;font-weight:400;}
 
-/* Campos */
+/* Tarjeta del formulario */
+@keyframes cardUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.login-box{position:relative;z-index:1;
+  background:rgba(15,18,35,.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(80,100,200,.2);border-radius:20px;
+  padding:28px 28px 24px;width:100%;max-width:390px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
+  animation:cardUp .45s .25s cubic-bezier(.22,.68,0,1.2) both;}
+
+/* Campos con icono */
 .field{margin-bottom:14px;}
-.field label{display:block;font-size:.78rem;color:var(--text2);margin-bottom:5px;font-weight:500;letter-spacing:.03em;}
-.field input{width:100%;background:rgba(13,20,36,.8);border:1px solid var(--border);
-  border-radius:var(--radius);padding:11px 14px;color:var(--text);
-  font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;}
-.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+.field label{display:block;font-size:.72rem;color:#7986cb;margin-bottom:7px;
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;}
+.input-wrap{position:relative;display:flex;align-items:center;}
+.input-wrap .inp-icon{position:absolute;left:14px;color:#4a5568;font-size:1rem;pointer-events:none;}
+.input-wrap input{width:100%;background:rgba(10,12,25,.7);border:1px solid rgba(80,100,200,.2);
+  border-radius:12px;padding:13px 14px 13px 42px;color:#c5cae9;
+  font-size:.92rem;outline:none;transition:border-color .2s,box-shadow .2s;}
+.input-wrap input:focus{border-color:rgba(100,120,255,.5);
+  box-shadow:0 0 0 3px rgba(80,100,200,.12);}
+.input-wrap input::placeholder{color:#3d4566;}
+/* Ojo contraseña */
+.eye-btn{position:absolute;right:12px;background:none;border:none;
+  color:#4a5568;cursor:pointer;font-size:1rem;padding:4px;}
+.eye-btn:hover{color:#7986cb;}
 
-/* Botón entrar */
-.btn-login{width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;
-  border:none;border-radius:var(--radius);padding:13px;font-size:.95rem;font-weight:600;
-  cursor:pointer;margin-top:6px;letter-spacing:.02em;
-  box-shadow:0 4px 14px rgba(37,99,235,.35);transition:transform .15s,box-shadow .15s;}
-.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.45);}
-.btn-login:active{transform:translateY(0);}
-.login-err{color:#f87171;font-size:.8rem;margin-top:10px;text-align:center;display:none;
-  background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.25);border-radius:6px;padding:8px;}
+/* Botón iniciar sesión */
+.btn-login{width:100%;
+  background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#6366f1 100%);
+  color:#fff;border:none;border-radius:12px;
+  padding:14px;font-size:1rem;font-weight:700;
+  cursor:pointer;margin-top:4px;letter-spacing:.02em;
+  box-shadow:0 6px 24px rgba(99,102,241,.4);
+  transition:transform .15s,box-shadow .15s,opacity .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(99,102,241,.5);}
+.btn-login:active{transform:translateY(0);opacity:.9;}
+
+/* Error */
+.login-err{color:#f87171;font-size:.8rem;margin-top:10px;text-align:center;
+  display:none;background:rgba(220,38,38,.1);
+  border:1px solid rgba(220,38,38,.25);border-radius:8px;padding:8px 12px;}
 .login-err.show{display:block;}
-.login-footer{display:flex;justify-content:center;margin-top:18px;}
-.login-reset{background:none;border:none;color:var(--text3);font-size:.72rem;
-  cursor:pointer;text-decoration:underline;padding:4px 8px;}
-.login-reset:hover{color:var(--text2);}
+
+/* Roles y footer */
+.login-roles{display:flex;gap:10px;justify-content:center;margin-top:20px;
+  position:relative;z-index:1;flex-wrap:wrap;}
+.role-badge{display:flex;align-items:center;gap:6px;
+  background:rgba(15,18,35,.7);border:1px solid rgba(80,100,200,.2);
+  border-radius:10px;padding:8px 16px;font-size:.82rem;color:#c5cae9;
+  font-weight:500;}
+.login-tagline{text-align:center;color:#3d4566;font-size:.75rem;
+  margin-top:10px;position:relative;z-index:1;}
+.login-footer-btns{display:flex;flex-direction:column;align-items:center;
+  gap:6px;margin-top:12px;position:relative;z-index:1;}
+.btn-cache{display:flex;align-items:center;gap:6px;
+  background:rgba(15,18,35,.7);border:1px solid rgba(80,100,200,.18);
+  border-radius:10px;padding:8px 18px;color:#7986cb;font-size:.82rem;
+  cursor:pointer;font-weight:500;}
+.btn-cache:hover{border-color:rgba(100,120,255,.4);color:#a5b4fc;}
+.login-cache-note{color:#2d3460;font-size:.72rem;}
+.login-reset{background:none;border:none;color:#2d3460;font-size:.72rem;
+  cursor:pointer;text-decoration:underline;margin-top:4px;}
+.login-reset:hover{color:#4a5568;}
 
 /* ── HEADER ─────────────────────────────────────────── */
 header{background:var(--bg2);border-bottom:1px solid var(--border);
@@ -266,37 +299,58 @@ td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
 
 <!-- LOGIN -->
 <div id="loginScreen">
-  <div class="login-bg">
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-    <div class="orb orb3"></div>
-  </div>
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="login-logo-img-wrap" id="loginLogoWrap">
-        <span class="logo-emoji">🏫</span>
-      </div>
-      <h1 id="loginTitle">Sistema de Calificaciones</h1>
-      <p class="login-inst" id="loginSubtitle">Ingresa a tu cuenta institucional</p>
+  <div class="login-bg"></div>
+
+  <!-- Logo y nombre FUERA de la tarjeta -->
+  <div class="login-logo-top">
+    <div class="login-logo-img-wrap" id="loginLogoWrap">
+      <span class="logo-emoji">🏫</span>
     </div>
+    <div class="login-school-name" id="loginTitle">Mi Escuela</div>
+    <div class="login-inst-text" id="loginSubtitle">Accede con tu cuenta institucional</div>
+  </div>
+
+  <!-- Tarjeta del formulario -->
+  <div class="login-box">
     <div class="field">
       <label>USUARIO</label>
-      <input type="text" id="loginUser" placeholder="usuario" autocomplete="username"
-             onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      <div class="input-wrap">
+        <span class="inp-icon">👤</span>
+        <input type="text" id="loginUser" placeholder="Nombre de usuario"
+               autocomplete="username"
+               onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      </div>
     </div>
     <div class="field">
       <label>CONTRASEÑA</label>
-      <input type="password" id="loginPass" placeholder="••••••••"
-             autocomplete="current-password"
-             onkeydown="if(event.key==='Enter') doLogin()">
+      <div class="input-wrap">
+        <span class="inp-icon">🔒</span>
+        <input type="password" id="loginPass" placeholder="••••••••"
+               autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') doLogin()">
+        <button class="eye-btn" type="button" onclick="togglePass()" id="eyeBtn">👁️</button>
+      </div>
     </div>
-    <button class="btn-login" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">
+      Iniciar Sesión →
+    </button>
     <div class="login-err" id="loginErr"></div>
-    <div class="login-footer">
-      <button class="login-reset" onclick="resetCredentials()">
-        ¿Problemas para entrar? Restablecer credenciales
-      </button>
-    </div>
+  </div>
+
+  <!-- Roles -->
+  <div class="login-roles">
+    <div class="role-badge">👩‍🏫 Docente</div>
+    <div class="role-badge">🛡️ Master Admin</div>
+  </div>
+  <div class="login-tagline">Sistema de Calificaciones Escolar · Acceso restringido</div>
+
+  <!-- Actualizar caché y reset -->
+  <div class="login-footer-btns">
+    <button class="btn-cache" onclick="loginClearCache()">🔄 Actualizar caché</button>
+    <div class="login-cache-note">Los datos guardados no se borran</div>
+    <button class="login-reset" onclick="resetCredentials()">
+      ¿Problemas para entrar? Restablecer credenciales
+    </button>
   </div>
 </div>
 
@@ -759,6 +813,22 @@ function checkSession(){
   const s=lsGet(SESSION_KEY,null);
   if(s&&(Date.now()-s.ts)<12*3600000){currentUser=s;return true;}
   lsDel(SESSION_KEY); return false;
+}
+
+function togglePass(){
+  const inp=document.getElementById('loginPass');
+  const btn=document.getElementById('eyeBtn');
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
+  else{inp.type='password';btn.textContent='👁️';}
+}
+
+function loginClearCache(){
+  // Solo limpia caché de assets del navegador, NO borra datos del usuario
+  if('caches' in window){
+    caches.keys().then(names=>names.forEach(n=>caches.delete(n)));
+  }
+  showToast('🔄 Caché actualizado','success');
+  setTimeout(()=>location.reload(),800);
 }
 
 function resetCredentials(){
