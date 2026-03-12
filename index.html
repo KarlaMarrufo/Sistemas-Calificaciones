@@ -251,14 +251,57 @@ td.no-total .ctx-hint{color:var(--red);}
 .add-student-row input{flex:1;}
 
 /* ── REPORTS ────────────────────────────────────────── */
-.report-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.report-filter select{flex:1;min-width:120px;}
-.report-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-.summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
-.summary-card{flex:1;min-width:80px;background:var(--bg3);border-radius:var(--radius);
-  padding:10px;text-align:center;}
-.summary-card .s-val{font-size:1.4rem;font-weight:700;}
-.summary-card .s-lbl{font-size:.72rem;color:var(--text2);margin-top:2px;}
+/* ── REPORTE VISUAL ── */
+.rpt-header{background:linear-gradient(135deg,var(--purple),#4f46e5);
+  border-radius:12px;padding:20px;margin-bottom:16px;color:#fff;}
+.rpt-school{font-size:1.1rem;font-weight:700;margin-bottom:4px;}
+.rpt-meta{font-size:.8rem;opacity:.85;margin-bottom:12px;}
+.rpt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.rpt-stat{background:rgba(255,255,255,.15);border-radius:8px;
+  padding:10px 6px;text-align:center;backdrop-filter:blur(4px);}
+.rpt-stat-num{font-size:1.5rem;font-weight:800;line-height:1;}
+.rpt-stat-lbl{font-size:.65rem;opacity:.9;margin-top:3px;text-transform:uppercase;letter-spacing:.05em;}
+.rpt-avg-big{text-align:center;margin-top:10px;}
+.rpt-avg-num{font-size:2.8rem;font-weight:900;line-height:1;}
+.rpt-avg-sub{font-size:.75rem;opacity:.8;margin-top:2px;}
+/* Tarjetas alumno */
+.stu-card{background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:16px;margin-bottom:12px;break-inside:avoid;}
+.stu-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.stu-num{background:var(--bg3);border-radius:8px;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:700;color:var(--text2);flex-shrink:0;}
+.stu-name{font-size:.95rem;font-weight:700;flex:1;}
+.stu-grade-badge{display:flex;flex-direction:column;align-items:center;
+  background:var(--bg3);border-radius:10px;padding:8px 14px;min-width:60px;}
+.stu-grade-num{font-size:1.6rem;font-weight:900;line-height:1;}
+.stu-grade-lbl{font-size:.65rem;font-weight:700;margin-top:2px;letter-spacing:.05em;}
+.grade-MB .stu-grade-num{color:#4ade80;} .grade-MB .stu-grade-lbl{color:#4ade80;}
+.grade-B  .stu-grade-num{color:#60a5fa;} .grade-B  .stu-grade-lbl{color:#60a5fa;}
+.grade-S  .stu-grade-num{color:#fbbf24;} .grade-S  .stu-grade-lbl{color:#fbbf24;}
+.grade-NS .stu-grade-num{color:#f87171;} .grade-NS .stu-grade-lbl{color:#f87171;}
+.grade-ND .stu-grade-num{color:var(--text3);}
+/* Barras de criterio */
+.crit-row{margin-bottom:10px;}
+.crit-label{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:4px;font-size:.75rem;}
+.crit-name{color:var(--text2);font-weight:600;}
+.crit-val{font-weight:700;font-size:.8rem;}
+.crit-bar{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;}
+.crit-fill{height:100%;border-radius:5px;transition:width .4s ease;}
+.fill-T{background:linear-gradient(90deg,#7c3aed,#a78bfa);}
+.fill-W{background:linear-gradient(90deg,#0284c7,#38bdf8);}
+.fill-D{background:linear-gradient(90deg,#15803d,#4ade80);}
+.fill-E{background:linear-gradient(90deg,#b45309,#fbbf24);}
+.crit-note{font-size:.68rem;color:var(--text3);margin-top:2px;}
+/* Multi-materia: mini encabezado */
+.mat-section{margin-bottom:8px;}
+.mat-label{font-size:.72rem;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;
+  padding:3px 8px;background:var(--bg3);border-radius:5px;display:inline-block;}
+/* Sin datos */
+.rpt-empty{text-align:center;padding:40px 20px;color:var(--text3);}
+.rpt-empty-icon{font-size:3rem;margin-bottom:8px;}
 
 /* ── SYNC ───────────────────────────────────────────── */
 .sync-status-box{display:flex;align-items:center;gap:12px;padding:14px;
@@ -305,12 +348,40 @@ td.no-total .ctx-hint{color:var(--red);}
   font-size:1.8rem;cursor:pointer;}
 
 /* ── PRINT ──────────────────────────────────────────── */
+
+/* ── PULL TO REFRESH ── */
+#ptrIndicator{
+  position:fixed;top:0;left:0;right:0;z-index:9998;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  height:0;overflow:hidden;background:rgba(124,58,237,.15);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(124,58,237,.3);
+  font-size:.82rem;color:var(--purple);font-weight:600;
+  transition:height .2s ease;pointer-events:none;
+}
+#ptrIndicator.ready{color:#4ade80;}
+#ptrSpinner{font-size:1rem;transition:transform .3s;}
+#ptrIndicator.released #ptrSpinner{animation:spin .7s linear infinite;}
+
 @media print{
-  header,nav,.report-filter,.report-btns,#toast{display:none!important;}
-  body{background:#fff;color:#000;}
-  .card{border:1px solid #ccc;}
-  table{border:1px solid #ccc;}
-  th,td{border:1px solid #ddd;}
+  header,nav,#rptControls,#toast,.tab:not(#tab-reports),
+  .login-screen{display:none!important;}
+  #tab-reports{display:block!important;}
+  body,main{background:#fff!important;color:#111!important;padding:0!important;margin:0!important;}
+  .rpt-header{background:#4c1d95!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+    border-radius:8px!important;color:#fff!important;}
+  .rpt-stat{background:rgba(255,255,255,.2)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .stu-card{background:#fff!important;border:1.5px solid #d1d5db!important;
+    border-radius:8px!important;page-break-inside:avoid;margin-bottom:10px!important;}
+  .stu-num{background:#f3f4f6!important;}
+  .stu-grade-badge{background:#f3f4f6!important;}
+  .crit-bar{background:#e5e7eb!important;}
+  .crit-fill{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .fill-T{background:#7c3aed!important;} .fill-W{background:#0284c7!important;}
+  .fill-D{background:#15803d!important;} .fill-E{background:#b45309!important;}
+  .mat-label{background:#f3f4f6!important;color:#374151!important;}
+  .rpt-avg-big,.rpt-stats{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{margin:15mm;}
 }
 @media(max-width:480px){
   main{padding:10px;} .card{padding:12px;} .login-box{padding:28px 20px;}
@@ -319,9 +390,16 @@ td.no-total .ctx-hint{color:var(--red);}
 </head>
 <body>
 
+<!-- PULL TO REFRESH -->
+<div id="ptrIndicator">
+  <span id="ptrSpinner">↓</span>
+  <span id="ptrText">Jala para actualizar</span>
+</div>
+
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-bg"></div>
+  <canvas id="bgCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;"></canvas>
 
   <!-- Logo y nombre FUERA de la tarjeta -->
   <div class="login-logo-top">
@@ -414,7 +492,7 @@ td.no-total .ctx-hint{color:var(--red);}
   <button class="nav-btn" id="nav-students" onclick="goTab('students')">
     <span class="nav-ico">👥</span>Alumnos</button>
   <button class="nav-btn" id="nav-aciertos" onclick="goTab('aciertos')">
-    <span class="nav-ico">🎯</span>Aciertos</button>
+    <span class="nav-ico">🎯</span>Puntuaje</button>
   <button class="nav-btn" id="nav-grades"   onclick="goTab('grades')">
     <span class="nav-ico">✏️</span>Calificaciones</button>
   <button class="nav-btn" id="nav-reports"  onclick="goTab('reports')">
@@ -504,7 +582,7 @@ td.no-total .ctx-hint{color:var(--red);}
 <!-- TAB: ACIERTOS (totales por materia/bimestre) -->
 <div class="tab" id="tab-aciertos">
   <div class="card" style="padding-bottom:8px;">
-    <div class="card-title">🎯 Configuración de Aciertos / Totales</div>
+    <div class="card-title">🎯 Configuración de Puntuaje / Totales</div>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px;line-height:1.6;">
       Define cuántos elementos hay en total para cada materia y bimestre.<br>
       <strong style="color:var(--text);">Tareas / Trabajos</strong>: cantidad total del bimestre &nbsp;·&nbsp;
@@ -523,7 +601,7 @@ td.no-total .ctx-hint{color:var(--red);}
   <div class="card">
     <div class="card-title" id="acLabel">📋 Totales — <span id="acSubLabel"></span></div>
     <div class="ac-grid" id="acGrid"></div>
-    <button class="btn btn-primary" style="margin-top:12px;" onclick="saveAciertos()">💾 Guardar Totales</button>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="saveAciertos()">💾 Guardar Puntuaje</button>
   </div>
   <div class="card">
     <div class="card-title">📊 Resumen de todos los bimestres</div>
@@ -568,25 +646,30 @@ td.no-total .ctx-hint{color:var(--red);}
 
 <!-- TAB: REPORTES -->
 <div class="tab" id="tab-reports">
-  <div class="card">
-    <div class="card-title">🔍 Filtros</div>
-    <div class="report-filter">
-      <select id="rptSubject" onchange="renderReport()">
-        <option value="">Todas las materias</option>
-      </select>
-      <select id="rptBim" onchange="renderReport()">
-        <option value="">Todos los bimestres</option>
-      </select>
+  <!-- CONTROLES -->
+  <div class="card" id="rptControls">
+    <div class="card-title">📊 Reporte de Calificaciones</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div>
+        <label class="field-label">📚 Materia</label>
+        <select id="rptSubject" onchange="renderReport()">
+          <option value="">— Todas —</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">📅 Bimestre</label>
+        <select id="rptBim" onchange="renderReport()">
+          <option value="">— Todos —</option>
+        </select>
+      </div>
     </div>
-    <div class="report-btns">
-      <button class="btn btn-outline" onclick="printReport()">🖨️ Imprimir</button>
-      <button class="btn btn-success btn-sm" onclick="exportExcel()">⬇️ Excel</button>
-    </div>
-    <div class="summary-row" id="rptSummary"></div>
-    <div class="tbl-wrap">
-      <table><thead id="rptHead"></thead><tbody id="rptBody"></tbody></table>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-outline" onclick="printReport()" style="flex:1;">🖨️ Imprimir</button>
+      <button class="btn btn-success" onclick="exportExcel()" style="flex:1;">⬇️ Excel</button>
     </div>
   </div>
+  <!-- CONTENIDO DEL REPORTE -->
+  <div id="rptContent"></div>
 </div>
 
 <!-- TAB: USUARIOS -->
@@ -886,6 +969,7 @@ async function doSync(){
     }
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     lsSet('calif_last_sync',now);
+    lsSet('calif_last_sync_ts',Date.now());
     setSyncUI('ok');
     updateHeader(); refreshCurrentTab();
     showToast('☁️ Datos actualizados','success');
@@ -908,6 +992,7 @@ async function doUpload(withLogo=false){
     if(!result.success) throw new Error(result.error||'El servidor devolvió success:false');
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     lsSet('calif_last_sync',now);
+    lsSet('calif_last_sync_ts',Date.now());
     lastCloudSave = Date.now();
     setSyncUI('ok');
     showToast('☁️ Datos guardados en la nube ✓','success');
@@ -1163,6 +1248,15 @@ function updateLoginLogo(){
     STATE.config.schoolName||'Sistema de Calificaciones';
 }
 
+/* Sincronizar al volver a la app (cambio de pestaña / desbloqueo) */
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden && currentUser && getApiUrl()){
+    // Solo si han pasado más de 30s desde la última sync
+    const last=lsGet('calif_last_sync_ts',0);
+    if(Date.now()-last>30000) doSync();
+  }
+});
+
 function onAppStart(){
   updateHeader();
   buildSubjectTabs(); buildBimTabs();
@@ -1392,7 +1486,7 @@ function saveAciertos(){
   saveLocal();
   renderAciertosSummary();
   renderGradesTable();
-  showToast(`✅ Totales guardados — ${sub} Bim ${bim}`,'success');
+  showToast(`✅ Puntuaje guardado — ${sub} Bim ${bim}`,'success');
   if(getApiUrl()) doUpload(false);
 }
 function renderAciertosSummary(){
@@ -1482,7 +1576,7 @@ function renderGradesTable(){
          border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.82rem;color:#fbbf24;">
         ⚠️ No hay totales configurados para <strong>${curSubject} Bim ${curBim}</strong>.
         <a href="#" onclick="goTab('aciertos');return false;"
-           style="color:#fbbf24;text-decoration:underline;margin-left:6px;">→ Configurar en 🎯 Aciertos</a>
+           style="color:#fbbf24;text-decoration:underline;margin-left:6px;">→ Configurar en 🎯 Puntuaje</a>
       </div>` : '';
 
   head.innerHTML=`<tr>
@@ -1493,7 +1587,7 @@ function renderGradesTable(){
       Trabajos${hasTrab?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.trabajos}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
     <th title="Disciplina % directo · máx ${w.disciplina}%">
       Disciplina<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">0–${w.disciplina}%</span></th>
-    <th title="Aciertos del examen / ${hasExamen?tot.examen:'?'} reactivos · ${w.examen}%">
+    <th title="Puntuaje del examen / ${hasExamen?tot.examen:'?'} reactivos · ${w.examen}%">
       Examen${hasExamen?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.examen}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
     <th>Calificación</th></tr>`;
 
@@ -1560,6 +1654,10 @@ function renderGradesTable(){
 
 function updateRowGrade(sid){
   collectRowRaw(sid);
+  // Auto-guardar local inmediatamente; subir a nube con debounce 1.5s
+  saveLocal();
+  clearTimeout(window._gradeUploadTimer);
+  window._gradeUploadTimer=setTimeout(()=>{if(getApiUrl())doUpload(false);},1500);
   const grade=calcGrade(sid,curSubject,curBim);
   const{lbl,cls}=gradeLabel(grade);
   const tot=getTotals(curSubject,curBim);
@@ -1666,63 +1764,211 @@ function gradeLabel(score){
    REPORTES
 ═══════════════════════════════════════════════════ */
 function updateReportFilters(){
-  const n=STATE.config.bimestres||5;
-  document.getElementById('rptSubject').innerHTML=
-    '<option value="">Todas las materias</option>'+
-    SUBJECTS.map(s=>`<option value="${s}">${s}</option>`).join('');
-  document.getElementById('rptBim').innerHTML=
-    '<option value="">Todos los bimestres</option>'+
-    Array.from({length:n},(_,i)=>i+1)
-      .map(b=>`<option value="${b}">Bimestre ${b}</option>`).join('');
-}
-function renderReport(){
-  updateReportFilters();
   const selSub=document.getElementById('rptSubject').value;
   const selBim=document.getElementById('rptBim').value;
-  const subjects=selSub?[selSub]:SUBJECTS;
   const n=STATE.config.bimestres||5;
-  const bims=selBim?[parseInt(selBim)]:Array.from({length:n},(_,i)=>i+1);
+  document.getElementById('rptSubject').innerHTML=
+    '<option value="">— Todas las materias —</option>'+
+    SUBJECTS.map(s=>`<option value="${s}"${selSub===s?' selected':''}>${s}</option>`).join('');
+  document.getElementById('rptBim').innerHTML=
+    '<option value="">— Todos los bimestres —</option>'+
+    Array.from({length:n},(_,i)=>i+1)
+      .map(b=>`<option value="${b}"${selBim==b?' selected':''}>Bimestre ${b}</option>`).join('');
+}
+
+function renderReport(){
+  updateReportFilters();
+  const selSub  = document.getElementById('rptSubject').value;
+  const selBim  = document.getElementById('rptBim').value;
+  const subjects = selSub ? [selSub] : SUBJECTS;
+  const n        = STATE.config.bimestres||5;
+  const bims     = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
+  const cfg      = STATE.config;
+  const out      = document.getElementById('rptContent');
+
   if(!STATE.students.length){
-    document.getElementById('rptHead').innerHTML='';
-    document.getElementById('rptBody').innerHTML=
-      `<tr><td style="padding:20px;color:var(--text3);">Sin alumnos</td></tr>`;
-    document.getElementById('rptSummary').innerHTML='';
+    out.innerHTML=`<div class="rpt-empty">
+      <div class="rpt-empty-icon">👥</div>
+      <div>No hay alumnos registrados</div>
+    </div>`;
     return;
   }
-  const cols=[];
-  subjects.forEach(s=>bims.forEach(b=>cols.push({s,b,label:`${s} B${b}`})));
-  document.getElementById('rptHead').innerHTML=`<tr>
-    <th>#</th><th>Alumno</th>
-    ${cols.map(c=>`<th>${c.label}</th>`).join('')}
-    <th>Promedio</th></tr>`;
-  let dist={MB:0,B:0,S:0,NS:0};
-  document.getElementById('rptBody').innerHTML=STATE.students.map((stu,i)=>{
-    const grades=cols.map(c=>calcGrade(stu.id,c.s,c.b));
-    const valid=grades.filter(g=>g>0);
-    const avg=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:0;
-    const{lbl:al,cls:ac}=gradeLabel(avg);
-    if(al)dist[al]++;
-    return `<tr>
-      <td style="color:var(--text3);">${i+1}</td>
-      <td>${esc(stu.name)}</td>
-      ${grades.map(g=>{const{lbl,cls}=gradeLabel(g);return`<td class="grade-cell">
-        <span class="grade-val ${cls}">${g>0?(g/10).toFixed(1):'–'}</span>
-        ${lbl?`<span style="font-size:.7rem;color:var(--text3);"> ${lbl}</span>`:''}
-      </td>`;}).join('')}
-      <td class="grade-cell">
-        <span class="grade-val ${ac}">${avg>0?(avg/10).toFixed(1):'–'}</span>
-        ${al?`<span style="font-size:.7rem;color:var(--text3);"> ${al}</span>`:''}
-      </td></tr>`;
-  }).join('');
-  document.getElementById('rptSummary').innerHTML=
-    [{v:dist.MB,l:'MB',c:'#4ade80'},{v:dist.B,l:'B',c:'#60a5fa'},
-     {v:dist.S,l:'S',c:'#fbbf24'},{v:dist.NS,l:'NS',c:'#f87171'},
-     {v:STATE.students.length,l:'Total',c:'var(--text2)'}]
-    .map(x=>`<div class="summary-card">
-      <div class="s-val" style="color:${x.c}">${x.v}</div>
-      <div class="s-lbl">${x.l}</div></div>`).join('');
+
+  // ── Calcular datos de todos los alumnos ──
+  const rows = STATE.students.map((stu,idx)=>{
+    const combos=[]; // {subject, bim, score, bd}
+    subjects.forEach(sub=>{
+      bims.forEach(b=>{
+        const score=calcGrade(stu.id,sub,b);
+        const w=Object.assign({},DEF_W,STATE.weights[`${sub}_${b}`]);
+        const tot=getTotals(sub,b);
+        const r=STATE.raw[`${stu.id}_${sub}_${b}`]||{};
+        const tPct=(tot.tareas>0&&r.t_ent!=null&&r.t_ent>=0)?
+          Math.round((r.t_ent/tot.tareas)*w.tareas*10)/10:null;
+        const wPct=(tot.trabajos>0&&r.w_ent!=null&&r.w_ent>=0)?
+          Math.round((r.w_ent/tot.trabajos)*w.trabajos*10)/10:null;
+        const dPct=(r.disc!=null&&r.disc>=0)?parseFloat(r.disc)||0:null;
+        const ePct=(tot.examen>0&&r.e_ent!=null&&r.e_ent>=0)?
+          Math.round((r.e_ent/tot.examen)*w.examen*10)/10:null;
+        combos.push({sub,b,score,w,tot,r,tPct,wPct,dPct,ePct});
+      });
+    });
+    const valid=combos.filter(c=>c.score>0);
+    const avg=valid.length?valid.reduce((a,c)=>a+c.score,0)/valid.length:0;
+    return{stu,idx,combos,avg};
+  });
+
+  // ── Estadísticas del grupo ──
+  const allAvg=rows.filter(r=>r.avg>0);
+  const grpAvg=allAvg.length?allAvg.reduce((a,r)=>a+r.avg,0)/allAvg.length:0;
+  const dist={MB:0,B:0,S:0,NS:0,ND:0};
+  rows.forEach(r=>{
+    const{lbl}=gradeLabel(r.avg);
+    if(lbl) dist[lbl]++; else dist.ND++;
+  });
+  const grpColor=grpAvg>=90?'#4ade80':grpAvg>=70?'#60a5fa':grpAvg>=60?'#fbbf24':'#f87171';
+  const grpLbl=grpAvg>=90?'MB':grpAvg>=70?'B':grpAvg>=60?'S':grpAvg>0?'NS':'–';
+
+  // Título del filtro seleccionado
+  const tituloSub  = selSub||'Todas las materias';
+  const tituloBim  = selBim?`Bimestre ${selBim}`:'Todos los bimestres';
+  const now=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+  let html='';
+
+  // ── ENCABEZADO ──
+  html+=`<div class="rpt-header">
+    <div class="rpt-school">🏫 ${esc(cfg.schoolName||'Mi Escuela')}</div>
+    <div class="rpt-meta">
+      ${cfg.grade?`${esc(cfg.grade)} · `:''}${cfg.group?`Grupo ${esc(cfg.group)} · `:''}
+      ${esc(tituloSub)} · ${esc(tituloBim)}<br>
+      <span style="opacity:.7">Ciclo ${esc(cfg.year||'–')} · Generado el ${now}</span>
+    </div>
+    <div class="rpt-stats">
+      <div class="rpt-stat">
+        <div class="rpt-stat-num" style="color:#4ade80">${dist.MB}</div>
+        <div class="rpt-stat-lbl">MB ≥ 9</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-num" style="color:#60a5fa">${dist.B}</div>
+        <div class="rpt-stat-lbl">B ≥ 7</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-num" style="color:#fbbf24">${dist.S}</div>
+        <div class="rpt-stat-lbl">S ≥ 6</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-num" style="color:#f87171">${dist.NS}</div>
+        <div class="rpt-stat-lbl">NS &lt; 6</div>
+      </div>
+    </div>
+    <div class="rpt-avg-big">
+      <div class="rpt-avg-num" style="color:${grpColor}">${grpAvg>0?(grpAvg/10).toFixed(1):'–'}</div>
+      <div class="rpt-avg-sub">Promedio general del grupo · ${grpLbl}</div>
+    </div>
+  </div>`;
+
+  // ── LEYENDA ──
+  html+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;font-size:.72rem;">
+    <span style="color:#4ade80;font-weight:700;">● MB</span> Muy Bien (9–10)&nbsp;&nbsp;
+    <span style="color:#60a5fa;font-weight:700;">● B</span> Bien (7–8.9)&nbsp;&nbsp;
+    <span style="color:#fbbf24;font-weight:700;">● S</span> Suficiente (6–6.9)&nbsp;&nbsp;
+    <span style="color:#f87171;font-weight:700;">● NS</span> No Suficiente (&lt;6)
+  </div>`;
+
+  // ── TARJETAS POR ALUMNO ──
+  rows.forEach(({stu,idx,combos,avg})=>{
+    const{lbl,cls}=gradeLabel(avg);
+    const dispGrade=avg>0?(avg/10).toFixed(1):'–';
+    const dispLbl=lbl||'ND';
+    const gradeCls=lbl?`grade-${lbl}`:'grade-ND';
+
+    html+=`<div class="stu-card">
+      <div class="stu-card-head">
+        <div class="stu-num">${idx+1}</div>
+        <div class="stu-name">${esc(stu.name)}</div>
+        <div class="stu-grade-badge ${gradeCls}">
+          <div class="stu-grade-num">${dispGrade}</div>
+          <div class="stu-grade-lbl">${dispLbl}</div>
+        </div>
+      </div>`;
+
+    // Agrupar combos por materia
+    const subjectsUsed=subjects;
+    subjectsUsed.forEach(sub=>{
+      const subCombos=combos.filter(c=>c.sub===sub);
+      if(subjects.length>1){
+        html+=`<div class="mat-section">
+          <span class="mat-label">${esc(sub)}</span>`;
+      }
+      subCombos.forEach(c=>{
+        if(bims.length>1){
+          html+=`<div style="font-size:.7rem;color:var(--text3);margin-bottom:4px;">Bimestre ${c.b}</div>`;
+        }
+        // Barras de criterios
+        html+=renderCriteriosBars(c);
+      });
+      if(subjects.length>1) html+=`</div>`;
+    });
+
+    html+=`</div>`; // stu-card
+  });
+
+  out.innerHTML=html;
 }
-function printReport(){window.print();}
+
+function renderCriteriosBars(c){
+  const{w,tot,r,tPct,wPct,dPct,ePct,score}=c;
+  const hasData=(tPct!=null||wPct!=null||dPct!=null||ePct!=null);
+  if(!hasData){
+    return `<div style="font-size:.75rem;color:var(--text3);padding:6px 0 10px;">
+      Sin calificaciones registradas</div>`;
+  }
+
+  function bar(label,pct,max,fillCls,rawLabel,icon){
+    if(pct==null) return '';
+    const pct100=max>0?Math.min(100,Math.round(pct/max*100)):0;
+    const color=pct100>=90?'#4ade80':pct100>=70?'#60a5fa':pct100>=60?'#fbbf24':'#f87171';
+    return `<div class="crit-row">
+      <div class="crit-label">
+        <span class="crit-name">${icon} ${label}</span>
+        <span class="crit-val" style="color:${color}">${pct.toFixed(1)} / ${max} pts</span>
+      </div>
+      <div class="crit-bar">
+        <div class="crit-fill ${fillCls}" style="width:${pct100}%"></div>
+      </div>
+      <div class="crit-note">${rawLabel}</div>
+    </div>`;
+  }
+
+  const tNote = (tot.tareas>0&&r.t_ent!=null)?
+    `${r.t_ent} de ${tot.tareas} tareas entregadas`:
+    (tPct!=null?'Registrado':'Sin registrar');
+  const wNote = (tot.trabajos>0&&r.w_ent!=null)?
+    `${r.w_ent} de ${tot.trabajos} trabajos realizados`:
+    (wPct!=null?'Registrado':'Sin registrar');
+  const dNote = dPct!=null?`Puntos asignados por la maestra`:'Sin registrar';
+  const eNote = (tot.examen>0&&r.e_ent!=null)?
+    `${r.e_ent} de ${tot.examen} reactivos correctos`:
+    (ePct!=null?'Registrado':'Sin registrar');
+
+  const total=(tPct||0)+(wPct||0)+(dPct||0)+(ePct||0);
+  const scoreColor=total>=90?'#4ade80':total>=70?'#60a5fa':total>=60?'#fbbf24':'#f87171';
+
+  return bar('Tareas',       tPct, w.tareas,     'fill-T', tNote, '📋')
+       + bar('Trabajos',     wPct, w.trabajos,   'fill-W', wNote, '📝')
+       + bar('Disciplina',   dPct, w.disciplina, 'fill-D', dNote, '⭐')
+       + bar('Examen',       ePct, w.examen,     'fill-E', eNote, '📄')
+       + `<div style="text-align:right;font-size:.78rem;margin-top:4px;padding-top:6px;
+            border-top:1px solid var(--border);color:${scoreColor};font-weight:700;">
+           Calificación: ${(total/10).toFixed(1)}
+          </div>`;
+}
+
+function printReport(){
+  // Aplicar clase print al body para CSS @media print
+  window.print();
+}
 function exportExcel(){
   const selSub=document.getElementById('rptSubject').value;
   const selBim=document.getElementById('rptBim').value;
@@ -1882,6 +2128,160 @@ function showToast(msg,type='success'){
   if(toastTimer)clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>{el.className='';},3200);
 }
+</script>
+<script>
+/* ══════════════════════════════════════
+   PULL-TO-REFRESH (móvil)
+══════════════════════════════════════ */
+(function(){
+  let startY=0, pulling=false, triggered=false;
+  const THRESHOLD=70; // px para activar
+  const ind=document.getElementById('ptrIndicator');
+  const spinner=document.getElementById('ptrSpinner');
+  const txt=document.getElementById('ptrText');
+
+  document.addEventListener('touchstart',e=>{
+    if(window.scrollY===0 && !isSyncing){
+      startY=e.touches[0].clientY;
+      pulling=true; triggered=false;
+    }
+  },{passive:true});
+
+  document.addEventListener('touchmove',e=>{
+    if(!pulling) return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy<=0){ ind.style.height='0'; return; }
+    const h=Math.min(dy*.45, THRESHOLD*.8);
+    ind.style.height=h+'px';
+    spinner.style.transform=`rotate(${(dy/THRESHOLD)*180}deg)`;
+    if(dy>=THRESHOLD && !triggered){
+      triggered=true;
+      ind.classList.add('ready');
+      txt.textContent='Suelta para sincronizar ✓';
+      spinner.textContent='↑';
+    } else if(dy<THRESHOLD){
+      ind.classList.remove('ready');
+      txt.textContent='Jala para actualizar';
+      spinner.textContent='↓';
+    }
+  },{passive:true});
+
+  document.addEventListener('touchend',()=>{
+    if(!pulling) return;
+    pulling=false;
+    if(triggered && currentUser && getApiUrl()){
+      ind.classList.add('released');
+      txt.textContent='Sincronizando…';
+      spinner.textContent='⟳';
+      doSync().then(()=>{
+        ind.style.height='0';
+        ind.classList.remove('ready','released');
+        txt.textContent='Jala para actualizar';
+        spinner.textContent='↓';
+      });
+    } else {
+      ind.style.height='0';
+      ind.classList.remove('ready','released');
+    }
+  },{passive:true});
+})();
+
+/* ═══════════════════════════
+   FONDO ANIMADO — partículas
+═══════════════════════════ */
+(function(){
+  const canvas = document.getElementById('bgCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, particles=[], raf;
+  const N = 55;          // cantidad de puntos
+  const MAXD = 130;      // distancia máxima para trazar línea
+  const SPEED = 0.35;    // velocidad
+
+  function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function mkParticle(){
+    return{
+      x: Math.random()*W,
+      y: Math.random()*H,
+      vx:(Math.random()-.5)*SPEED,
+      vy:(Math.random()-.5)*SPEED,
+      r: Math.random()*1.8+1,
+      // color: mezcla púrpura/azul/blanco
+      hue: Math.random()<.5 ? 240 : 265
+    };
+  }
+
+  function init(){
+    resize();
+    particles=[];
+    for(let i=0;i<N;i++) particles.push(mkParticle());
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // Conexiones
+    for(let i=0;i<N;i++){
+      for(let j=i+1;j<N;j++){
+        const dx=particles[i].x-particles[j].x;
+        const dy=particles[i].y-particles[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<MAXD){
+          const alpha=0.18*(1-d/MAXD);
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle=`rgba(160,140,255,${alpha})`;
+          ctx.lineWidth=0.8;
+          ctx.stroke();
+        }
+      }
+    }
+    // Puntos
+    particles.forEach(p=>{
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},80%,75%,0.7)`;
+      ctx.fill();
+    });
+  }
+
+  function update(){
+    particles.forEach(p=>{
+      p.x += p.vx;
+      p.y += p.vy;
+      // rebotar en bordes
+      if(p.x<0){p.x=0;p.vx*=-1;}
+      if(p.x>W){p.x=W;p.vx*=-1;}
+      if(p.y<0){p.y=0;p.vy*=-1;}
+      if(p.y>H){p.y=H;p.vy*=-1;}
+    });
+  }
+
+  function loop(){
+    update(); draw();
+    raf=requestAnimationFrame(loop);
+  }
+
+  // Solo animar cuando el login está visible; pausar dentro de la app
+  function syncVisibility(){
+    const loginVisible = !document.getElementById('loginScreen').classList.contains('hidden');
+    canvas.style.display = loginVisible ? '' : 'none';
+    if(loginVisible && !raf){ init(); loop(); }
+    if(!loginVisible && raf){ cancelAnimationFrame(raf); raf=null; }
+  }
+
+  window.addEventListener('resize',()=>{ resize(); });
+  // Observar cambios en loginScreen
+  const obs=new MutationObserver(syncVisibility);
+  obs.observe(document.getElementById('loginScreen'),{attributes:true,attributeFilter:['class']});
+
+  // Iniciar
+  init(); loop();
+})();
 </script>
 </body>
 </html>
