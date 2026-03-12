@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔍 Diagnóstico</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#0f0f0f;color:#e5e5e5;padding:16px;font-size:14px;}
+  h1{font-size:1.2rem;margin-bottom:4px;color:#fff;}
+  .sub{font-size:.8rem;color:#888;margin-bottom:20px;}
+  .card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;margin-bottom:14px;}
+  label{display:block;font-size:.75rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+  input{width:100%;background:#0f0f0f;border:1px solid #333;border-radius:6px;padding:10px;
+    color:#fff;font-size:.82rem;font-family:monospace;outline:none;}
+  input:focus{border-color:#7c3aed;}
+  .btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;font-size:.95rem;
+    font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s;}
+  .btn-main{background:#7c3aed;color:#fff;}
+  .btn-copy{background:#1f2937;color:#e5e5e5;border:1px solid #374151;}
+  .btn:active{opacity:.7;}
+  .section{margin-top:12px;}
+  .step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #222;}
+  .step:last-child{border-bottom:none;}
+  .ico{font-size:1.1rem;min-width:24px;margin-top:2px;}
+  .step-title{font-weight:600;font-size:.85rem;margin-bottom:3px;}
+  .step-detail{font-size:.75rem;color:#888;word-break:break-all;line-height:1.5;}
+  .ok .step-title{color:#4ade80;}
+  .err .step-title{color:#f87171;}
+  .warn .step-title{color:#fbbf24;}
+  .info .step-title{color:#60a5fa;}
+  .pending .step-title{color:#888;}
+  .raw-box{background:#0a0a0a;border:1px solid #222;border-radius:6px;padding:10px;
+    font-family:monospace;font-size:.72rem;word-break:break-all;white-space:pre-wrap;
+    max-height:160px;overflow-y:auto;margin-top:6px;color:#a3a3a3;line-height:1.5;}
+  .spinner{display:inline-block;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #copyBtn{display:none;}
+  #result{display:none;}
+  .tag{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:4px;
+    font-weight:700;margin-left:6px;vertical-align:middle;}
+  .tag-ok{background:#14532d;color:#4ade80;}
+  .tag-err{background:#450a0a;color:#f87171;}
+  .tag-warn{background:#422006;color:#fbbf24;}
+</style>
+</head>
+<body>
+
+<h1>🔍 Diagnóstico de Conexión</h1>
+<p class="sub">Pega la URL de tu Apps Script y presiona Diagnosticar</p>
+
+<div class="card">
+  <label>URL de Google Apps Script</label>
+  <input type="text" id="urlInput"
+    autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+    placeholder="https://script.google.com/macros/s/.../exec">
+  <button class="btn btn-main" onclick="runDiag()">🔍 Diagnosticar</button>
+</div>
+
+<div id="result">
+  <div class="card" id="steps"></div>
+  <div class="card" style="display:none;" id="rawCard">
+    <label>Respuesta completa del servidor</label>
+    <div class="raw-box" id="rawBox"></div>
+  </div>
+  <button class="btn btn-copy" id="copyBtn" onclick="copyReport()">📋 Copiar reporte completo</button>
+</div>
+
+<script>
+let fullReport = '';
+
+function cleanUrl(raw){
+  return raw
+    .replace(/[\r\n\t\u00A0\u200B-\u200D\uFEFF]/g,'')
+    .trim();
+}
+
+function addStep(id, ico, cls, title, detail, raw){
+  const el = document.getElementById('steps');
+  const existing = document.getElementById('step-'+id);
+  const html = `<div class="step ${cls}" id="step-${id}">
+    <div class="ico">${ico}</div>
+    <div>
+      <div class="step-title">${title}</div>
+      ${detail?`<div class="step-detail">${detail}</div>`:''}
+      ${raw?`<div class="raw-box">${escHtml(raw.slice(0,400))}${raw.length>400?'\n…('+raw.length+' chars total)':''}</div>`:''}
+    </div>
+  </div>`;
+  if(existing) existing.outerHTML = html;
+  else el.insertAdjacentHTML('beforeend', html);
+}
+
+function escHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function runDiag(){
+  const rawUrl = document.getElementById('urlInput').value;
+  const url = cleanUrl(rawUrl);
+  document.getElementById('steps').innerHTML = '';
+  document.getElementById('result').style.display = '';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('rawCard').style.display = 'none';
+  document.getElementById('rawBox').textContent = '';
+  fullReport = '=== DIAGNÓSTICO SISTEMA CALIFICACIONES ===\n';
+  fullReport += 'Fecha: ' + new Date().toLocaleString('es-MX') + '\n';
+  fullReport += 'Dispositivo: ' + navigator.userAgent + '\n';
+  fullReport += 'URL ingresada: ' + rawUrl + '\n';
+  fullReport += 'URL limpia:    ' + url + '\n\n';
+
+  // PASO 1 — Validar formato URL
+  addStep('p1','⏳','pending','Paso 1: Validando URL…','');
+  await sleep(100);
+  if(!url){
+    addStep('p1','❌','err','Paso 1: URL vacía','No ingresaste ninguna URL.');
+    report('PASO 1','FAIL','URL vacía'); finish(); return;
+  }
+  if(!url.startsWith('https://script.google.com')){
+    addStep('p1','❌','err','Paso 1: URL incorrecta',
+      'La URL debe comenzar con <b>https://script.google.com</b><br>Lo que tienes: '+escHtml(url.slice(0,80)));
+    report('PASO 1','FAIL','URL no empieza con script.google.com: '+url); finish(); return;
+  }
+  if(!url.includes('/exec')){
+    addStep('p1','⚠️','warn','Paso 1: URL sospechosa',
+      'La URL no contiene "/exec". Verifica que sea la URL de la implementación, no del editor.<br>'+escHtml(url.slice(0,100)));
+    report('PASO 1','WARN','URL sin /exec');
+  } else {
+    addStep('p1','✅','ok','Paso 1: Formato de URL correcto',url.slice(0,80)+'…');
+    report('PASO 1','OK','Formato válido');
+  }
+
+  // PASO 2 — Longitud / caracteres raros
+  addStep('p2','⏳','pending','Paso 2: Revisando caracteres…','');
+  await sleep(100);
+  const invisible = (rawUrl.length - url.length);
+  if(invisible > 0){
+    addStep('p2','⚠️','warn','Paso 2: Caracteres invisibles eliminados',
+      `Se eliminaron ${invisible} carácter(es) invisibles (espacios, saltos de línea) de la URL pegada. Esto es normal al pegar desde el celular.`);
+    report('PASO 2','WARN','Caracteres invisibles: '+invisible);
+  } else {
+    addStep('p2','✅','ok','Paso 2: Sin caracteres extraños','La URL está limpia.');
+    report('PASO 2','OK');
+  }
+
+  // PASO 3 — Fetch GET
+  addStep('p3','⏳','pending','Paso 3: Conectando con el servidor… <span class="spinner">⟳</span>',
+    'Esto puede tardar 3–8 segundos la primera vez.');
+  const t0 = Date.now();
+  let res, rawText, ms;
+  try{
+    res = await fetch(url+'?action=load', {method:'GET', redirect:'follow', cache:'no-cache'});
+    ms = Date.now()-t0;
+    rawText = await res.text();
+  } catch(fetchErr){
+    ms = Date.now()-t0;
+    addStep('p3','❌','err','Paso 3: Error de red ('+ms+'ms)',
+      fetchErr.message+'<br><br>Esto pasa cuando:<br>• No hay internet<br>• El navegador bloqueó la solicitud (CORS)<br>• La URL tiene un error de tipeo');
+    report('PASO 3','FAIL','fetch error: '+fetchErr.message); finish(rawText); return;
+  }
+
+  // PASO 4 — Analizar respuesta HTTP
+  addStep('p4','⏳','pending','Paso 4: Analizando respuesta…','');
+  await sleep(50);
+  report('PASO 3','OK','HTTP '+res.status+' en '+ms+'ms');
+  report('PASO 4','INFO','Status: '+res.status+' | Tipo: '+(rawText.trim()[0]==='{'?'JSON':'HTML/otro'));
+
+  if(res.status===200 && rawText.trim().startsWith('{')){
+    // Intentar parsear JSON
+    let data;
+    try{ data = JSON.parse(rawText); }
+    catch(e){
+      addStep('p4','❌','err','Paso 4: JSON inválido ('+ms+'ms)',
+        'El servidor respondió 200 pero el cuerpo no es JSON válido.');
+      report('PASO 4','FAIL','JSON parse error'); finish(rawText); return;
+    }
+
+    if(data.success){
+      addStep('p4','✅','ok','Paso 4: ¡Conexión exitosa! ('+ms+'ms)',
+        '🏫 Escuela: '+(data.config&&data.config.schoolName||'(sin nombre)')+'<br>'+
+        '👥 Alumnos: '+((data.students||[]).length)+'<br>'+
+        '🎯 Totales: '+Object.keys(data.totals||{}).length+'<br>'+
+        '📝 Califs: '+Object.keys(data.raw||{}).length);
+      addStep('p5','✅','ok','✅ RESULTADO: Todo funciona correctamente',
+        'El sistema puede conectarse al servidor. Si en la app principal no funciona, el problema es la URL guardada en ese dispositivo, no el servidor.');
+      report('PASO 4','OK','success:true | alumnos:'+(data.students||[]).length);
+      report('RESULTADO','ÉXITO — El servidor responde correctamente');
+    } else {
+      addStep('p4','❌','err','Paso 4: Servidor respondió error ('+ms+'ms)',
+        'success:false<br>Error: '+(data.error||'desconocido'));
+      report('PASO 4','FAIL','success:false: '+data.error); finish(rawText); return;
+    }
+
+  } else if(rawText.includes('accounts.google.com')||rawText.includes('ServiceLogin')||rawText.includes('signin')){
+    addStep('p4','❌','err','Paso 4: Google pide inicio de sesión <span class="tag tag-err">ERROR PRINCIPAL</span>',
+      'El deployment de Apps Script <b>no permite acceso anónimo</b>.<br><br>'+
+      '<b>Solución:</b><br>'+
+      '1. Abre script.google.com<br>'+
+      '2. Implementar → Administrar implementaciones<br>'+
+      '3. ✏️ Editar → <b>Quién tiene acceso: Cualquier usuario, incluso anónimo</b><br>'+
+      '4. Nueva versión → Actualizar');
+    report('PASO 4','FAIL','Google login redirect — acceso no anónimo'); finish(rawText); return;
+
+  } else if(res.status===302||res.status===301){
+    addStep('p4','⚠️','warn','Paso 4: Redirección ('+res.status+')',
+      'El servidor redirigió la solicitud. Normalmente se sigue automáticamente.');
+    report('PASO 4','WARN','redirect '+res.status);
+
+  } else {
+    addStep('p4','❌','err','Paso 4: Respuesta inesperada HTTP '+res.status+' ('+ms+'ms)',
+      'El servidor no devolvió JSON. Revisa que el Code.gs esté completo y hayas implementado.');
+    report('PASO 4','FAIL','HTTP '+res.status+' body: '+rawText.slice(0,100));
+    finish(rawText); return;
+  }
+
+  finish(rawText);
+}
+
+function report(step, status, detail){
+  fullReport += '['+step+'] '+status+(detail?' — '+detail:'')+'\n';
+}
+
+function finish(rawText){
+  fullReport += '\n=== FIN DEL REPORTE ===\n';
+  if(rawText){
+    fullReport += '\n--- RESPUESTA CRUDA (primeros 800 chars) ---\n'+rawText.slice(0,800)+'\n';
+    document.getElementById('rawCard').style.display='';
+    document.getElementById('rawBox').textContent = rawText.slice(0,800)+(rawText.length>800?'\n…':'' );
+  }
+  document.getElementById('copyBtn').style.display = 'block';
+}
+
+function copyReport(){
+  navigator.clipboard.writeText(fullReport).then(()=>{
+    document.getElementById('copyBtn').textContent='✅ ¡Copiado! Pégaselo a Claude';
+    setTimeout(()=>{ document.getElementById('copyBtn').textContent='📋 Copiar reporte completo'; },3000);
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=fullReport; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    document.getElementById('copyBtn').textContent='✅ ¡Copiado!';
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+</script>
+</body>
+</html>
