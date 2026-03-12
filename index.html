@@ -775,6 +775,8 @@ let curSubject     = SUBJECTS[0];
 let curBim         = 1;
 let isSyncing      = false;
 let syncIntervalId = null;
+let lastLocalSave  = 0;   // timestamp of last local change
+let lastCloudSave  = 0;   // timestamp of last successful upload
 
 /* ═══════════════════════════════════════════════════
    LOCAL STORAGE
@@ -810,6 +812,7 @@ function saveLocal(){
   lsSet('calif_raw',      STATE.raw);
   try{if(STATE.logo)localStorage.setItem('calif_logo',STATE.logo);
       else localStorage.removeItem('calif_logo');}catch(e){}
+  lastLocalSave = Date.now();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -862,6 +865,11 @@ async function doSync(){
   const url=getApiUrl();
   if(!url){showSyncError('No hay URL configurada.\nVe a ☁️ Sincronizar y pega tu URL de Apps Script.');return;}
   if(isSyncing)return;
+  // Si hay cambios locales recientes sin subir (últimos 30s), no pisar
+  if(lastLocalSave > lastCloudSave && (Date.now()-lastLocalSave) < 30000){
+    console.log('doSync: omitido — cambios locales pendientes de subir');
+    return;
+  }
   isSyncing=true; setSyncUI('syncing'); hideSyncError();
   try{
     const result = await apiGet('load');
@@ -900,6 +908,7 @@ async function doUpload(withLogo=false){
     if(!result.success) throw new Error(result.error||'El servidor devolvió success:false');
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     lsSet('calif_last_sync',now);
+    lastCloudSave = Date.now();
     setSyncUI('ok');
     showToast('☁️ Datos guardados en la nube ✓','success');
   }catch(err){
@@ -1229,6 +1238,7 @@ function saveConfig(){
   };
   saveLocal(); updateHeader(); buildBimTabs(); updateLoginLogo();
   showToast('✅ Configuración guardada','success');
+  if(getApiUrl()) doUpload(false);
 }
 function loadLogo(input){
   const file=input.files[0];
@@ -1239,6 +1249,7 @@ function loadLogo(input){
     STATE.logo=e.target.result; saveLocal();
     updateConfigForm(); updateHeader(); updateLoginLogo();
     showToast('✅ Logo guardado','success');
+    if(getApiUrl()) doUpload(true);
   };
   reader.readAsDataURL(file);
 }
@@ -1246,6 +1257,7 @@ function clearLogo(){
   STATE.logo=null; saveLocal();
   updateConfigForm(); updateHeader(); updateLoginLogo();
   showToast('Logo eliminado','warning');
+  if(getApiUrl()) doUpload(false);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1279,6 +1291,7 @@ function addStudent(){
   STATE.students.push({id:uid(),name});
   saveLocal(); inp.value=''; renderStudents();
   showToast('✅ Alumno agregado');
+  if(getApiUrl()) doUpload(false);
 }
 function toggleEditStudent(id){
   const span=document.getElementById('sname_'+id);
@@ -1291,13 +1304,15 @@ function saveStudentName(id){
   const name=inp.value.trim();
   if(!name)return;
   const s=STATE.students.find(x=>x.id===id);
-  if(s){s.name=name;saveLocal();renderStudents();showToast('✅ Nombre actualizado');}
+  if(s){s.name=name;saveLocal();renderStudents();showToast('✅ Nombre actualizado');
+    if(getApiUrl()) doUpload(false);}
 }
 function deleteStudent(id){
   if(!confirm('¿Eliminar este alumno? Se borrarán sus calificaciones.'))return;
   STATE.students=STATE.students.filter(s=>s.id!==id);
   Object.keys(STATE.raw).forEach(k=>{if(k.startsWith(id+'_'))delete STATE.raw[k];});
   saveLocal(); renderStudents(); showToast('Alumno eliminado','warning');
+  if(getApiUrl()) doUpload(false);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1376,8 +1391,9 @@ function saveAciertos(){
   STATE.totals[acKey(sub,bim)] = {tareas,trabajos,examen};
   saveLocal();
   renderAciertosSummary();
-  renderGradesTable(); // Actualiza tabla de calificaciones con nuevos totales
+  renderGradesTable();
   showToast(`✅ Totales guardados — ${sub} Bim ${bim}`,'success');
+  if(getApiUrl()) doUpload(false);
 }
 function renderAciertosSummary(){
   const n=STATE.config.bimestres||5;
@@ -1438,6 +1454,8 @@ function onWeightChange(){
   document.getElementById('wTotal').textContent='Total: '+sum+'%';
   document.getElementById('wTotal').className='weight-total '+(Math.abs(sum-100)<.1?'ok':'bad');
   STATE.weights[wKey()]=w; saveLocal();
+  if(getApiUrl()){ clearTimeout(window._wUploadTimer);
+    window._wUploadTimer=setTimeout(()=>doUpload(false),2000); }
 }
 
 /* ── Tabla de captura (NUEVA — 1 campo por criterio) ── */
