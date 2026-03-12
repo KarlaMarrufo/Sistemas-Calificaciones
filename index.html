@@ -214,10 +214,32 @@ td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
 .weight-total.ok{background:rgba(22,163,74,.15);color:#4ade80;}
 .weight-total.bad{background:rgba(220,38,38,.15);color:#f87171;}
 
-/* ── GRADES ─────────────────────────────────────────── */
-.grade-val{font-weight:700;}
+/* ── ACIERTOS CONFIG ─────────────────────────────────── */
+.ac-grid{display:flex;gap:16px;flex-wrap:wrap;}
+.ac-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;flex:1;min-width:150px;}
+.ac-item label{display:block;font-size:.75rem;color:var(--text2);font-weight:600;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.ac-item .ac-desc{font-size:.72rem;color:var(--text3);margin-bottom:8px;line-height:1.4;}
+.ac-item input{font-size:1.1rem;font-weight:700;text-align:center;padding:10px;}
+.ac-item.disc-item{background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.25);}
+.ac-item.disc-item label{color:#a78bfa;}
+
+/* ── GRADES TABLE (nueva versión simplificada) ─────── */
+.grade-val{font-weight:700;font-size:.95rem;}
+.grade-lbl{font-size:.72rem;margin-left:3px;font-weight:600;}
 .MB{color:#4ade80;} .B{color:#60a5fa;} .S{color:#fbbf24;} .NS{color:#f87171;}
-.grade-cell{text-align:center;}
+.grade-cell{text-align:center;min-width:90px;}
+.grade-breakdown{font-size:.64rem;color:var(--text3);margin-top:3px;
+  white-space:nowrap;letter-spacing:.01em;line-height:1.4;}
+/* Celdas de captura con contexto */
+.input-ctx{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;}
+.input-ctx input{text-align:center;font-weight:600;}
+.input-ctx .ctx-hint{font-size:.65rem;color:var(--text3);white-space:nowrap;}
+.input-ctx .ctx-hint.warn{color:var(--yellow);}
+/* Resaltado cuando no hay total configurado */
+td.no-total{background:rgba(220,38,38,.06);}
+td.no-total .ctx-hint{color:var(--red);}
 
 /* ── STUDENTS ───────────────────────────────────────── */
 .del-btn{background:none;border:none;color:var(--red);cursor:pointer;
@@ -375,6 +397,8 @@ td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
     <span class="nav-ico">⚙️</span>Config</button>
   <button class="nav-btn" id="nav-students" onclick="goTab('students')">
     <span class="nav-ico">👥</span>Alumnos</button>
+  <button class="nav-btn" id="nav-aciertos" onclick="goTab('aciertos')">
+    <span class="nav-ico">🎯</span>Aciertos</button>
   <button class="nav-btn" id="nav-grades"   onclick="goTab('grades')">
     <span class="nav-ico">✏️</span>Calificaciones</button>
   <button class="nav-btn" id="nav-reports"  onclick="goTab('reports')">
@@ -457,6 +481,41 @@ td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
       <input id="newStudentName" placeholder="Nombre completo del alumno"
              onkeydown="if(event.key==='Enter') addStudent()">
       <button class="btn btn-primary" onclick="addStudent()">➕ Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: ACIERTOS (totales por materia/bimestre) -->
+<div class="tab" id="tab-aciertos">
+  <div class="card" style="padding-bottom:8px;">
+    <div class="card-title">🎯 Configuración de Aciertos / Totales</div>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:12px;line-height:1.6;">
+      Define cuántos elementos hay en total para cada materia y bimestre.<br>
+      <strong style="color:var(--text);">Tareas / Trabajos</strong>: cantidad total del bimestre &nbsp;·&nbsp;
+      <strong style="color:var(--text);">Examen</strong>: número de reactivos.<br>
+      <span style="color:var(--text3);font-size:.78rem;">Disciplina no necesita total — la maestra la asigna directo en % al calificar.</span>
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <span style="font-size:.8rem;color:var(--text2);">Materia:</span>
+      <div class="subject-tabs" id="acSubjectTabs" style="margin:0;"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:.8rem;color:var(--text2);">Bimestre:</span>
+      <div class="bim-tabs" id="acBimTabs" style="margin:0;"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="acLabel">📋 Totales — <span id="acSubLabel"></span></div>
+    <div class="ac-grid" id="acGrid"></div>
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="saveAciertos()">💾 Guardar Totales</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 Resumen de todos los bimestres</div>
+    <div class="tbl-wrap">
+      <table id="acSummaryTable">
+        <thead id="acSummaryHead"></thead>
+        <tbody id="acSummaryBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -629,6 +688,7 @@ let STATE = {
   config:   {schoolName:'',year:'',grade:'',group:'',bimestres:5},
   students: [],
   weights:  {},
+  totals:   {},   /* { 'Materia_Bim': {tareas:50, trabajos:10, examen:40} } */
   raw:      {},
   logo:     null,
 };
@@ -649,6 +709,7 @@ function loadLocal(){
   STATE.config   = lsGet('calif_config',   STATE.config);
   STATE.students = lsGet('calif_students', []);
   STATE.weights  = lsGet('calif_weights',  {});
+  STATE.totals   = lsGet('calif_totals',   {});
   STATE.raw      = lsGet('calif_raw',      {});
   try{STATE.logo=localStorage.getItem('calif_logo')||null;}catch(e){}
 }
@@ -656,6 +717,7 @@ function saveLocal(){
   lsSet('calif_config',   STATE.config);
   lsSet('calif_students', STATE.students);
   lsSet('calif_weights',  STATE.weights);
+  lsSet('calif_totals',   STATE.totals);
   lsSet('calif_raw',      STATE.raw);
   try{if(STATE.logo)localStorage.setItem('calif_logo',STATE.logo);
       else localStorage.removeItem('calif_logo');}catch(e){}
@@ -692,6 +754,7 @@ async function doSync(){
     if(result.config)  {STATE.config=result.config;   lsSet('calif_config',  result.config);}
     if(result.students){STATE.students=result.students;lsSet('calif_students',result.students);}
     if(result.weights) {STATE.weights=result.weights;  lsSet('calif_weights', result.weights);}
+    if(result.totals)  {STATE.totals=result.totals;    lsSet('calif_totals',  result.totals);}
     if(result.raw)     {STATE.raw=result.raw;           lsSet('calif_raw',     result.raw);}
     if(result.logo!==undefined){
       STATE.logo=result.logo;
@@ -715,7 +778,7 @@ async function doUpload(withLogo=false){
   setSyncUI('syncing');
   try{
     const payload={action:'save',config:STATE.config,students:STATE.students,
-                   weights:STATE.weights,raw:STATE.raw};
+                   weights:STATE.weights,totals:STATE.totals,raw:STATE.raw};
     if(withLogo)payload.logo=STATE.logo;
     const res=await apiPost(payload);
     const result=await res.json();
@@ -955,6 +1018,7 @@ function updateLoginLogo(){
 function onAppStart(){
   updateHeader();
   buildSubjectTabs(); buildBimTabs();
+  buildAcSubjectTabs(); buildAcBimTabs();
   renderWeightRow(); renderStudents();
   renderGradesTable(); renderReport(); renderUsers();
   updateConfigForm(); updateSyncTab();
@@ -985,10 +1049,11 @@ function goTab(id){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   document.getElementById('nav-'+id).classList.add('active');
-  if(id==='grades')  renderGradesTable();
-  if(id==='reports') renderReport();
-  if(id==='sync')    updateSyncTab();
-  if(id==='usuarios')renderUsers();
+  if(id==='aciertos') renderAciertosTabs();
+  if(id==='grades')   renderGradesTable();
+  if(id==='reports')  renderReport();
+  if(id==='sync')     updateSyncTab();
+  if(id==='usuarios') renderUsers();
 }
 function refreshCurrentTab(){
   const a=document.querySelector('.nav-btn.active');
@@ -1097,6 +1162,104 @@ function deleteStudent(id){
 }
 
 /* ═══════════════════════════════════════════════════
+   ACIERTOS — configuración de totales
+═══════════════════════════════════════════════════ */
+let curAcSubject = SUBJECTS[0];
+let curAcBim     = 1;
+
+function buildAcSubjectTabs(){
+  const el=document.getElementById('acSubjectTabs');
+  if(!el)return;
+  el.innerHTML=SUBJECTS.map(s=>
+    `<button class="subject-tab${s===curAcSubject?' active':''}"
+             onclick="selectAcSubject('${s}')">${s}</button>`).join('');
+}
+function buildAcBimTabs(){
+  const el=document.getElementById('acBimTabs');
+  if(!el)return;
+  const n=STATE.config.bimestres||5;
+  el.innerHTML=Array.from({length:n},(_,i)=>i+1).map(b=>
+    `<button class="bim-tab${b===curAcBim?' active':''}"
+             onclick="selectAcBim(${b})">Bim ${b}</button>`).join('');
+  if(curAcBim>n)curAcBim=1;
+}
+function selectAcSubject(s){curAcSubject=s;buildAcSubjectTabs();renderAciertosConfig();renderAciertosSummary();}
+function selectAcBim(b){curAcBim=b;buildAcBimTabs();renderAciertosConfig();}
+
+function acKey(sub,bim){return `${sub}_${bim}`;}
+function getTotals(sub,bim){
+  return Object.assign({tareas:0,trabajos:0,examen:0}, STATE.totals[acKey(sub,bim)]);
+}
+
+function renderAciertosTabs(){
+  buildAcSubjectTabs(); buildAcBimTabs();
+  renderAciertosConfig(); renderAciertosSummary();
+}
+function renderAciertosConfig(){
+  const sub=curAcSubject, bim=curAcBim;
+  const w=Object.assign({},DEF_W,STATE.weights[acKey(sub,bim)]);
+  const tot=getTotals(sub,bim);
+  document.getElementById('acSubLabel').textContent=`${sub} · Bimestre ${bim}`;
+  document.getElementById('acGrid').innerHTML=`
+    <div class="ac-item">
+      <label>📋 Tareas</label>
+      <div class="ac-desc">Cantidad total de tareas del bimestre<br>
+        <em>Peso en calificación: ${w.tareas}%</em></div>
+      <input type="number" id="ac_tareas" min="0" value="${tot.tareas||''}" placeholder="ej. 50">
+    </div>
+    <div class="ac-item">
+      <label>📝 Trabajos</label>
+      <div class="ac-desc">Cantidad total de trabajos del bimestre<br>
+        <em>Peso en calificación: ${w.trabajos}%</em></div>
+      <input type="number" id="ac_trabajos" min="0" value="${tot.trabajos||''}" placeholder="ej. 10">
+    </div>
+    <div class="ac-item disc-item">
+      <label>🎭 Disciplina</label>
+      <div class="ac-desc">La maestra asigna el % directo al calificar<br>
+        <em>Rango: 0% – ${w.disciplina}%</em></div>
+      <div style="padding:10px;text-align:center;font-size:.85rem;color:#a78bfa;">
+        ✅ No requiere configuración previa
+      </div>
+    </div>
+    <div class="ac-item">
+      <label>📊 Examen</label>
+      <div class="ac-desc">Número de reactivos del examen<br>
+        <em>Peso en calificación: ${w.examen}%</em></div>
+      <input type="number" id="ac_examen" min="0" value="${tot.examen||''}" placeholder="ej. 40">
+    </div>`;
+}
+function saveAciertos(){
+  const sub=curAcSubject, bim=curAcBim;
+  const tareas   = parseInt(document.getElementById('ac_tareas').value)||0;
+  const trabajos = parseInt(document.getElementById('ac_trabajos').value)||0;
+  const examen   = parseInt(document.getElementById('ac_examen').value)||0;
+  if(!tareas&&!trabajos&&!examen){showToast('Ingresa al menos un total','warning');return;}
+  STATE.totals[acKey(sub,bim)] = {tareas,trabajos,examen};
+  saveLocal();
+  renderAciertosSummary();
+  renderGradesTable(); // Actualiza tabla de calificaciones con nuevos totales
+  showToast(`✅ Totales guardados — ${sub} Bim ${bim}`,'success');
+}
+function renderAciertosSummary(){
+  const n=STATE.config.bimestres||5;
+  const bims=Array.from({length:n},(_,i)=>i+1);
+  const head=document.getElementById('acSummaryHead');
+  const body=document.getElementById('acSummaryBody');
+  if(!head||!body)return;
+  head.innerHTML=`<tr><th>Bimestre</th><th>Tareas</th><th>Trabajos</th><th>Examen</th></tr>`;
+  body.innerHTML=bims.map(b=>{
+    const tot=getTotals(curAcSubject,b);
+    const conf=tot.tareas||tot.trabajos||tot.examen;
+    return `<tr ${!conf?'style="opacity:.45"':''}>
+      <td><strong>Bim ${b}</strong></td>
+      <td>${tot.tareas||'<span style="color:var(--red)">Sin config</span>'}</td>
+      <td>${tot.trabajos||'<span style="color:var(--red)">Sin config</span>'}</td>
+      <td>${tot.examen||'<span style="color:var(--red)">Sin config</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════
    CALIFICACIONES — TABS
 ═══════════════════════════════════════════════════ */
 function buildSubjectTabs(){
@@ -1115,7 +1278,7 @@ function buildBimTabs(){
 function selectSubject(s){curSubject=s;buildSubjectTabs();renderWeightRow();renderGradesTable();}
 function selectBim(b){curBim=b;buildBimTabs();renderWeightRow();renderGradesTable();}
 
-/* ── Pesos ─────────────────────────────────── */
+/* ── Pesos ─────────────────────────────────────────── */
 function wKey(){return `${curSubject}_${curBim}`;}
 function getWeights(){return Object.assign({},DEF_W,STATE.weights[wKey()]);}
 function renderWeightRow(){
@@ -1138,59 +1301,139 @@ function onWeightChange(){
   STATE.weights[wKey()]=w; saveLocal();
 }
 
-/* ── Tabla de captura ──────────────────────── */
+/* ── Tabla de captura (NUEVA — 1 campo por criterio) ── */
 function renderGradesTable(){
   document.getElementById('gradesLabel').textContent=`✏️ ${curSubject} — Bimestre ${curBim}`;
   const head=document.getElementById('gradesHead');
   const body=document.getElementById('gradesTbody');
   if(!STATE.students.length){
     head.innerHTML='';
-    body.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Agrega alumnos primero</td></tr>`;
+    body.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">
+      Agrega alumnos primero en la pestaña 👥 Alumnos</td></tr>`;
     return;
   }
+  const w   = getWeights();
+  const tot = getTotals(curSubject,curBim);
+  const hasTareas   = tot.tareas>0;
+  const hasTrab     = tot.trabajos>0;
+  const hasExamen   = tot.examen>0;
+  const noConfig    = !hasTareas&&!hasTrab&&!hasExamen;
+
+  // Warning si falta configuración
+  const warn = noConfig
+    ? `<div style="background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.4);
+         border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.82rem;color:#fbbf24;">
+        ⚠️ No hay totales configurados para <strong>${curSubject} Bim ${curBim}</strong>.
+        <a href="#" onclick="goTab('aciertos');return false;"
+           style="color:#fbbf24;text-decoration:underline;margin-left:6px;">→ Configurar en 🎯 Aciertos</a>
+      </div>` : '';
+
   head.innerHTML=`<tr>
     <th>#</th><th>Alumno</th>
-    <th title="Tareas entregadas">T.Ent</th><th title="Tareas totales">T.Tot</th>
-    <th title="Trabajos entregados">W.Ent</th><th title="Trabajos totales">W.Tot</th>
-    <th title="Disciplina">Disc</th>
-    <th title="Examen aciertos">E.Ent</th><th title="Examen total">E.Tot</th>
-    <th>Calif</th></tr>`;
-  const w=getWeights();
+    <th title="Tareas entregadas / ${hasTareas?tot.tareas:'?'} · ${w.tareas}%">
+      Tareas${hasTareas?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.tareas}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
+    <th title="Trabajos realizados / ${hasTrab?tot.trabajos:'?'} · ${w.trabajos}%">
+      Trabajos${hasTrab?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.trabajos}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
+    <th title="Disciplina % directo · máx ${w.disciplina}%">
+      Disciplina<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">0–${w.disciplina}%</span></th>
+    <th title="Aciertos del examen / ${hasExamen?tot.examen:'?'} reactivos · ${w.examen}%">
+      Examen${hasExamen?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.examen}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
+    <th>Calificación</th></tr>`;
+
+  const tableWrap = document.querySelector('#tab-grades .tbl-wrap');
+  if(tableWrap){
+    let warnDiv=document.getElementById('gradesWarn');
+    if(!warnDiv){warnDiv=document.createElement('div');warnDiv.id='gradesWarn';tableWrap.before(warnDiv);}
+    warnDiv.innerHTML=warn;
+  }
+
   body.innerHTML=STATE.students.map((s,i)=>{
     const k=`${s.id}_${curSubject}_${curBim}`;
     const r=STATE.raw[k]||{};
     const grade=calcGrade(s.id,curSubject,curBim);
     const{lbl,cls}=gradeLabel(grade);
+    const bd=calcBreakdown(s.id,curSubject,curBim,tot,w);
+    // Helpers para mostrar contexto en cada celda
+    const tHint = hasTareas   ? `${r.t_ent!=null?r.t_ent:'–'}/${tot.tareas} = ${bd.tPct!=null?bd.tPct.toFixed(1)+'%':'–'}` : '';
+    const wHint = hasTrab     ? `${r.w_ent!=null?r.w_ent:'–'}/${tot.trabajos} = ${bd.wPct!=null?bd.wPct.toFixed(1)+'%':'–'}` : '';
+    const eHint = hasExamen   ? `${r.e_ent!=null?r.e_ent:'–'}/${tot.examen} = ${bd.ePct!=null?bd.ePct.toFixed(1)+'%':'–'}` : '';
+    const dHint = `= ${r.disc!=null?r.disc:'–'}% de ${w.disciplina}%`;
     return `<tr data-sid="${s.id}">
       <td style="color:var(--text3);">${i+1}</td>
       <td style="font-weight:500;">${esc(s.name)}</td>
-      <td><input type="number" min="0" class="raw-in" data-f="t_ent" data-sid="${s.id}" value="${r.t_ent!==undefined?r.t_ent:''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="t_tot" data-sid="${s.id}" value="${r.t_tot!==undefined?r.t_tot:''}" placeholder="–"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="w_ent" data-sid="${s.id}" value="${r.w_ent!==undefined?r.w_ent:''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="w_tot" data-sid="${s.id}" value="${r.w_tot!==undefined?r.w_tot:''}" placeholder="–"></td>
-      <td><input type="number" min="0" max="${w.disciplina}" class="raw-in" data-f="disc" data-sid="${s.id}" value="${r.disc!==undefined?r.disc:''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="e_ent" data-sid="${s.id}" value="${r.e_ent!==undefined?r.e_ent:''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="e_tot" data-sid="${s.id}" value="${r.e_tot!==undefined?r.e_tot:''}" placeholder="–"></td>
+      <td class="${!hasTareas?'no-total':''}">
+        <div class="input-ctx">
+          <input type="number" min="0" max="${tot.tareas||9999}" class="raw-in"
+                 data-f="t_ent" data-sid="${s.id}"
+                 value="${r.t_ent!=null?r.t_ent:''}" placeholder="0">
+          <span class="ctx-hint ${!hasTareas?'warn':''}">${hasTareas?tHint:'Sin total'}</span>
+        </div></td>
+      <td class="${!hasTrab?'no-total':''}">
+        <div class="input-ctx">
+          <input type="number" min="0" max="${tot.trabajos||9999}" class="raw-in"
+                 data-f="w_ent" data-sid="${s.id}"
+                 value="${r.w_ent!=null?r.w_ent:''}" placeholder="0">
+          <span class="ctx-hint ${!hasTrab?'warn':''}">${hasTrab?wHint:'Sin total'}</span>
+        </div></td>
+      <td>
+        <div class="input-ctx">
+          <input type="number" min="0" max="${w.disciplina}" step="0.1" class="raw-in"
+                 data-f="disc" data-sid="${s.id}"
+                 value="${r.disc!=null?r.disc:''}" placeholder="0">
+          <span class="ctx-hint">${dHint}</span>
+        </div></td>
+      <td class="${!hasExamen?'no-total':''}">
+        <div class="input-ctx">
+          <input type="number" min="0" max="${tot.examen||9999}" class="raw-in"
+                 data-f="e_ent" data-sid="${s.id}"
+                 value="${r.e_ent!=null?r.e_ent:''}" placeholder="0">
+          <span class="ctx-hint ${!hasExamen?'warn':''}">${hasExamen?eHint:'Sin total'}</span>
+        </div></td>
       <td class="grade-cell">
         <span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
-        <span style="font-size:.72rem;color:var(--text3);margin-left:2px;">${lbl}</span>
+        <span class="grade-lbl ${cls}">${lbl}</span>
+        ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}
       </td></tr>`;
   }).join('');
+
   document.querySelectorAll('.raw-in').forEach(inp=>{
     inp.addEventListener('input',()=>updateRowGrade(inp.dataset.sid));
   });
 }
+
 function updateRowGrade(sid){
   collectRowRaw(sid);
   const grade=calcGrade(sid,curSubject,curBim);
   const{lbl,cls}=gradeLabel(grade);
+  const tot=getTotals(curSubject,curBim);
+  const w=getWeights();
+  const bd=calcBreakdown(sid,curSubject,curBim,tot,w);
+  // Actualizar hints de contexto en la misma fila
   const row=document.querySelector(`tr[data-sid="${sid}"]`);
-  if(row){
-    row.querySelector('.grade-cell').innerHTML=
-      `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
-       <span style="font-size:.72rem;color:var(--text3);margin-left:2px;">${lbl}</span>`;
+  if(!row)return;
+  const r=STATE.raw[`${sid}_${curSubject}_${curBim}`]||{};
+  if(tot.tareas>0){
+    const hint=row.querySelector(`[data-f="t_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(hint) hint.textContent=`${r.t_ent!=null?r.t_ent:'–'}/${tot.tareas} = ${bd.tPct!=null?bd.tPct.toFixed(1)+'%':'–'}`;
   }
+  if(tot.trabajos>0){
+    const hint=row.querySelector(`[data-f="w_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(hint) hint.textContent=`${r.w_ent!=null?r.w_ent:'–'}/${tot.trabajos} = ${bd.wPct!=null?bd.wPct.toFixed(1)+'%':'–'}`;
+  }
+  if(tot.examen>0){
+    const hint=row.querySelector(`[data-f="e_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(hint) hint.textContent=`${r.e_ent!=null?r.e_ent:'–'}/${tot.examen} = ${bd.ePct!=null?bd.ePct.toFixed(1)+'%':'–'}`;
+  }
+  {
+    const hint=row.querySelector(`[data-f="disc"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(hint) hint.textContent=`= ${r.disc!=null?r.disc:'–'}% de ${w.disciplina}%`;
+  }
+  row.querySelector('.grade-cell').innerHTML=
+    `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
+     <span class="grade-lbl ${cls}">${lbl}</span>
+     ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}`;
 }
+
 function collectRowRaw(sid){
   const k=`${sid}_${curSubject}_${curBim}`;
   const r=STATE.raw[k]||{};
@@ -1209,19 +1452,50 @@ function saveGrades(){
 
 /* ═══════════════════════════════════════════════════
    CÁLCULO
+   Lógica:
+   · Tareas   = (entregadas ÷ total_tareas) × peso%
+   · Trabajos = (realizados ÷ total_trabajos) × peso%
+   · Disciplina = % directo asignado (0–peso%)
+   · Examen   = (aciertos ÷ total_reactivos) × peso%
+   · Promedio = (T+W+D+E) ÷ 10  → escala 0–10
 ═══════════════════════════════════════════════════ */
 function calcGrade(sid,subject,bim){
   const key=`${sid}_${subject}_${bim}`;
   const r=STATE.raw[key];
   if(!r)return 0;
   const w=Object.assign({},DEF_W,STATE.weights[`${subject}_${bim}`]);
+  const tot=getTotals(subject,bim);
   let score=0;
-  if(r.t_tot>0&&r.t_ent>=0) score+=(r.t_ent/r.t_tot)*w.tareas;
-  if(r.w_tot>0&&r.w_ent>=0) score+=(r.w_ent/r.w_tot)*w.trabajos;
-  if(r.disc>=0)              score+=(r.disc||0);
-  if(r.e_tot>0&&r.e_ent>=0) score+=(r.e_ent/r.e_tot)*w.examen;
+  if(tot.tareas>0   && r.t_ent!=null && r.t_ent>=0) score += (r.t_ent/tot.tareas)*w.tareas;
+  if(tot.trabajos>0 && r.w_ent!=null && r.w_ent>=0) score += (r.w_ent/tot.trabajos)*w.trabajos;
+  if(r.disc!=null   && r.disc>=0)                    score += parseFloat(r.disc)||0;
+  if(tot.examen>0   && r.e_ent!=null && r.e_ent>=0) score += (r.e_ent/tot.examen)*w.examen;
   return Math.min(100,Math.max(0,Math.round(score*10)/10));
 }
+
+/* Desglose detallado — retorna {tPct, wPct, dPct, ePct, formula} */
+function calcBreakdown(sid,subject,bim,tot,w){
+  if(!tot) tot=getTotals(subject,bim);
+  if(!w)   w=Object.assign({},DEF_W,STATE.weights[`${subject}_${bim}`]);
+  const r=STATE.raw[`${sid}_${subject}_${bim}`]||{};
+  const f=v=>v!=null?v.toFixed(1):null;
+
+  const tPct = (tot.tareas>0   && r.t_ent!=null && r.t_ent>=0) ? Math.round((r.t_ent/tot.tareas)*w.tareas*10)/10   : null;
+  const wPct = (tot.trabajos>0 && r.w_ent!=null && r.w_ent>=0) ? Math.round((r.w_ent/tot.trabajos)*w.trabajos*10)/10: null;
+  const dPct = (r.disc!=null   && r.disc>=0)                    ? parseFloat(r.disc)||0                              : null;
+  const ePct = (tot.examen>0   && r.e_ent!=null && r.e_ent>=0) ? Math.round((r.e_ent/tot.examen)*w.examen*10)/10   : null;
+
+  const parts=[];
+  if(tPct!=null) parts.push(`T:${f(tPct)}/${w.tareas}`);
+  if(wPct!=null) parts.push(`W:${f(wPct)}/${w.trabajos}`);
+  if(dPct!=null) parts.push(`D:${f(dPct)}/${w.disciplina}`);
+  if(ePct!=null) parts.push(`E:${f(ePct)}/${w.examen}`);
+  const total=((tPct||0)+(wPct||0)+(dPct||0)+(ePct||0));
+  const formula=parts.length? parts.join(' · ')+` = ${total.toFixed(1)} → ${(total/10).toFixed(2)}` : '';
+
+  return{tPct,wPct,dPct,ePct,formula};
+}
+
 function gradeLabel(score){
   const g=score/10;
   if(g>=9) return{lbl:'MB',cls:'MB'};
