@@ -730,12 +730,7 @@ function checkSession() {
 }
 
 function resetCredentials() {
-  if (!confirm('Esto restablecerá los usuarios a los valores por defecto.
-
-Usuario: karlamarrufo
-Contraseña: Karla2026
-
-¿Continuar?')) return;
+  if (!confirm('Esto restablecerá los usuarios a los valores por defecto.\n\nUsuario: karlamarrufo\nContraseña: Karla2026\n\n¿Continuar?')) return;
   localStorage.removeItem(USERS_KEY);
   // Also clear any old system session keys
   ['session','sys_users','calif_session','audit_session'].forEach(k => {
