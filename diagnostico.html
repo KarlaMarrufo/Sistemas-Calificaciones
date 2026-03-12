@@ -3,247 +3,262 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔍 Diagnóstico</title>
+<title>Diagnóstico</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;background:#0f0f0f;color:#e5e5e5;padding:16px;font-size:14px;}
-  h1{font-size:1.2rem;margin-bottom:4px;color:#fff;}
-  .sub{font-size:.8rem;color:#888;margin-bottom:20px;}
-  .card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;margin-bottom:14px;}
-  label{display:block;font-size:.75rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
-  input{width:100%;background:#0f0f0f;border:1px solid #333;border-radius:6px;padding:10px;
-    color:#fff;font-size:.82rem;font-family:monospace;outline:none;}
-  input:focus{border-color:#7c3aed;}
-  .btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;font-size:.95rem;
-    font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .2s;}
-  .btn-main{background:#7c3aed;color:#fff;}
-  .btn-copy{background:#1f2937;color:#e5e5e5;border:1px solid #374151;}
-  .btn:active{opacity:.7;}
-  .section{margin-top:12px;}
-  .step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #222;}
-  .step:last-child{border-bottom:none;}
-  .ico{font-size:1.1rem;min-width:24px;margin-top:2px;}
-  .step-title{font-weight:600;font-size:.85rem;margin-bottom:3px;}
-  .step-detail{font-size:.75rem;color:#888;word-break:break-all;line-height:1.5;}
-  .ok .step-title{color:#4ade80;}
-  .err .step-title{color:#f87171;}
-  .warn .step-title{color:#fbbf24;}
-  .info .step-title{color:#60a5fa;}
-  .pending .step-title{color:#888;}
-  .raw-box{background:#0a0a0a;border:1px solid #222;border-radius:6px;padding:10px;
-    font-family:monospace;font-size:.72rem;word-break:break-all;white-space:pre-wrap;
-    max-height:160px;overflow-y:auto;margin-top:6px;color:#a3a3a3;line-height:1.5;}
-  .spinner{display:inline-block;animation:spin 1s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  #copyBtn{display:none;}
-  #result{display:none;}
-  .tag{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:4px;
-    font-weight:700;margin-left:6px;vertical-align:middle;}
-  .tag-ok{background:#14532d;color:#4ade80;}
-  .tag-err{background:#450a0a;color:#f87171;}
-  .tag-warn{background:#422006;color:#fbbf24;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,system-ui,sans-serif;background:#0f0f0f;color:#e5e5e5;
+  padding:16px;font-size:14px;min-height:100vh;}
+h1{font-size:1.15rem;margin-bottom:4px;color:#fff;}
+p{font-size:.8rem;color:#888;margin-bottom:16px;}
+textarea{width:100%;background:#111;border:1px solid #333;border-radius:8px;
+  padding:10px;color:#e5e5e5;font-size:.75rem;font-family:monospace;
+  resize:none;height:70px;outline:none;}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:8px;
+  font-size:1rem;font-weight:700;cursor:pointer;margin-top:8px;color:#fff;}
+.bp{background:#7c3aed;} .bg{background:#15803d;} .br{background:#991b1b;}
+.card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;
+  padding:14px;margin-bottom:12px;}
+.row{display:flex;gap:8px;align-items:flex-start;padding:8px 0;
+  border-bottom:1px solid #1f1f1f;}
+.row:last-child{border-bottom:none;}
+.ico{font-size:1.1rem;min-width:22px;}
+.title{font-size:.85rem;font-weight:600;}
+.detail{font-size:.75rem;color:#9ca3af;margin-top:3px;line-height:1.5;word-break:break-all;}
+.ok .title{color:#4ade80;} .err .title{color:#f87171;}
+.warn .title{color:#fbbf24;} .pend .title{color:#6b7280;}
+.mono{background:#0a0a0a;border:1px solid #222;border-radius:6px;
+  padding:8px;font-family:monospace;font-size:.68rem;word-break:break-all;
+  white-space:pre-wrap;max-height:140px;overflow-y:auto;margin-top:6px;color:#a3a3a3;}
+#copyArea{width:100%;height:80px;background:#111;border:1px solid #333;
+  border-radius:8px;padding:8px;color:#e5e5e5;font-size:.7rem;
+  font-family:monospace;margin-top:8px;display:none;}
 </style>
 </head>
 <body>
 
-<h1>🔍 Diagnóstico de Conexión</h1>
-<p class="sub">Pega la URL de tu Apps Script y presiona Diagnosticar</p>
+<h1>🔍 Diagnóstico</h1>
+<p>Pega la URL completa de Apps Script y presiona el botón</p>
 
 <div class="card">
-  <label>URL de Google Apps Script</label>
-  <input type="text" id="urlInput"
-    autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-    placeholder="https://script.google.com/macros/s/.../exec">
-  <button class="btn btn-main" onclick="runDiag()">🔍 Diagnosticar</button>
+  <textarea id="urlInput" autocomplete="off" autocorrect="off"
+    autocapitalize="none" spellcheck="false"
+    placeholder="https://script.google.com/macros/s/AKfy.../exec"></textarea>
+  <button class="btn bp" onclick="startDiag()">🔍 Diagnosticar</button>
 </div>
 
-<div id="result">
+<div id="logDiv" style="display:none">
   <div class="card" id="steps"></div>
-  <div class="card" style="display:none;" id="rawCard">
-    <label>Respuesta completa del servidor</label>
-    <div class="raw-box" id="rawBox"></div>
+  <div class="card" id="rawCard" style="display:none">
+    <div style="font-size:.72rem;color:#888;margin-bottom:5px">RESPUESTA DEL SERVIDOR:</div>
+    <div class="mono" id="rawBox"></div>
   </div>
-  <button class="btn btn-copy" id="copyBtn" onclick="copyReport()">📋 Copiar reporte completo</button>
+  <button class="btn bg" id="copyBtn" onclick="copyReport()" style="display:none">
+    📋 COPIAR REPORTE — pégalo en Claude
+  </button>
+  <textarea id="copyArea" readonly></textarea>
 </div>
 
 <script>
-let fullReport = '';
+var lines = [];
+var stepsEl = null;
 
-function cleanUrl(raw){
-  return raw
-    .replace(/[\r\n\t\u00A0\u200B-\u200D\uFEFF]/g,'')
-    .trim();
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function addStep(id, ico, cls, title, detail, raw){
-  const el = document.getElementById('steps');
-  const existing = document.getElementById('step-'+id);
-  const html = `<div class="step ${cls}" id="step-${id}">
-    <div class="ico">${ico}</div>
-    <div>
-      <div class="step-title">${title}</div>
-      ${detail?`<div class="step-detail">${detail}</div>`:''}
-      ${raw?`<div class="raw-box">${escHtml(raw.slice(0,400))}${raw.length>400?'\n…('+raw.length+' chars total)':''}</div>`:''}
-    </div>
-  </div>`;
-  if(existing) existing.outerHTML = html;
-  else el.insertAdjacentHTML('beforeend', html);
+function addRow(id, ico, cls, title, detail, mono){
+  if(!stepsEl) stepsEl = document.getElementById('steps');
+  var inner = '<div class="ico">'+ico+'</div><div>'
+    +'<div class="title">'+title+'</div>'
+    +(detail ? '<div class="detail">'+detail+'</div>' : '')
+    +(mono   ? '<div class="mono">'+esc(String(mono).slice(0,500))+'</div>' : '')
+    +'</div>';
+  var existing = document.getElementById('sr'+id);
+  if(existing){
+    existing.className = 'row '+cls;
+    existing.innerHTML = inner;
+  } else {
+    var d = document.createElement('div');
+    d.id = 'sr'+id;
+    d.className = 'row '+cls;
+    d.innerHTML = inner;
+    stepsEl.appendChild(d);
+  }
 }
 
-function escHtml(s){
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function log(msg){ lines.push(msg); }
 
-async function runDiag(){
-  const rawUrl = document.getElementById('urlInput').value;
-  const url = cleanUrl(rawUrl);
+function startDiag(){
+  lines = [];
+  stepsEl = null;
   document.getElementById('steps').innerHTML = '';
-  document.getElementById('result').style.display = '';
+  document.getElementById('logDiv').style.display = '';
   document.getElementById('copyBtn').style.display = 'none';
   document.getElementById('rawCard').style.display = 'none';
-  document.getElementById('rawBox').textContent = '';
-  fullReport = '=== DIAGNÓSTICO SISTEMA CALIFICACIONES ===\n';
-  fullReport += 'Fecha: ' + new Date().toLocaleString('es-MX') + '\n';
-  fullReport += 'Dispositivo: ' + navigator.userAgent + '\n';
-  fullReport += 'URL ingresada: ' + rawUrl + '\n';
-  fullReport += 'URL limpia:    ' + url + '\n\n';
+  document.getElementById('copyArea').style.display = 'none';
 
-  // PASO 1 — Validar formato URL
-  addStep('p1','⏳','pending','Paso 1: Validando URL…','');
-  await sleep(100);
+  addRow('init','⏳','pend','Iniciando diagnóstico…','');
+  log('=== REPORTE DIAGNÓSTICO ===');
+  log('Fecha: '+new Date().toLocaleString('es-MX'));
+  log('Online: '+navigator.onLine);
+  log('UA: '+navigator.userAgent);
+  log('');
+
+  // Leer y limpiar URL
+  var raw = document.getElementById('urlInput').value || '';
+  var url = raw.replace(/[\r\n\t\u00A0\u200B-\u200D\uFEFF]/g,'').trim();
+
+  log('URL raw ('+raw.length+'): '+raw);
+  log('URL clean ('+url.length+'): '+url);
+
+  addRow('dev','📱','pend',
+    'Dispositivo',
+    'Online: '+(navigator.onLine?'✅ Sí':'❌ Sin internet')+
+    '<br>'+esc(navigator.userAgent.slice(0,80)));
+  log('[DEV] online='+navigator.onLine);
+
+  // Validar URL
   if(!url){
-    addStep('p1','❌','err','Paso 1: URL vacía','No ingresaste ninguna URL.');
-    report('PASO 1','FAIL','URL vacía'); finish(); return;
+    addRow('p1','❌','err','URL vacía','Pega la URL en el campo de texto.');
+    log('[P1] FAIL: vacía'); finish(''); return;
   }
   if(!url.startsWith('https://script.google.com')){
-    addStep('p1','❌','err','Paso 1: URL incorrecta',
-      'La URL debe comenzar con <b>https://script.google.com</b><br>Lo que tienes: '+escHtml(url.slice(0,80)));
-    report('PASO 1','FAIL','URL no empieza con script.google.com: '+url); finish(); return;
+    addRow('p1','❌','err','URL incorrecta',
+      'Debe empezar con https://script.google.com<br>Tienes: '+esc(url.slice(0,80)));
+    log('[P1] FAIL: no script.google.com'); finish(''); return;
   }
-  if(!url.includes('/exec')){
-    addStep('p1','⚠️','warn','Paso 1: URL sospechosa',
-      'La URL no contiene "/exec". Verifica que sea la URL de la implementación, no del editor.<br>'+escHtml(url.slice(0,100)));
-    report('PASO 1','WARN','URL sin /exec');
+  var diff = raw.length - url.length;
+  if(diff > 0){
+    addRow('p1','⚠️','warn','Se quitaron '+diff+' char(s) invisible(s)',
+      'Normal al pegar en iOS. La URL ya quedó limpia.');
+    log('[P1] WARN: '+diff+' chars invisibles');
   } else {
-    addStep('p1','✅','ok','Paso 1: Formato de URL correcto',url.slice(0,80)+'…');
-    report('PASO 1','OK','Formato válido');
+    addRow('p1','✅','ok','URL con formato correcto',esc(url.slice(0,60))+'…');
+    log('[P1] OK');
   }
 
-  // PASO 2 — Longitud / caracteres raros
-  addStep('p2','⏳','pending','Paso 2: Revisando caracteres…','');
-  await sleep(100);
-  const invisible = (rawUrl.length - url.length);
-  if(invisible > 0){
-    addStep('p2','⚠️','warn','Paso 2: Caracteres invisibles eliminados',
-      `Se eliminaron ${invisible} carácter(es) invisibles (espacios, saltos de línea) de la URL pegada. Esto es normal al pegar desde el celular.`);
-    report('PASO 2','WARN','Caracteres invisibles: '+invisible);
-  } else {
-    addStep('p2','✅','ok','Paso 2: Sin caracteres extraños','La URL está limpia.');
-    report('PASO 2','OK');
-  }
+  // Conectar con XHR (más compatible que fetch en iOS)
+  addRow('p2','⏳','pend','Conectando… (espera hasta 15s)','Usando XMLHttpRequest');
+  log('[P2] iniciando XHR a: '+url+'?action=load');
 
-  // PASO 3 — Fetch GET
-  addStep('p3','⏳','pending','Paso 3: Conectando con el servidor… <span class="spinner">⟳</span>',
-    'Esto puede tardar 3–8 segundos la primera vez.');
-  const t0 = Date.now();
-  let res, rawText, ms;
+  var xhr = new XMLHttpRequest();
+  var t0 = Date.now();
+
+  xhr.onload = function(){
+    var ms = Date.now()-t0;
+    var st = xhr.status;
+    var body = xhr.responseText || '';
+    log('[P2] XHR onload status='+st+' ms='+ms+' len='+body.length);
+    log('[P2] primeros 300 chars: '+body.slice(0,300));
+    addRow('p2','✅','ok','Servidor respondió ('+ms+'ms)','HTTP '+st+' — '+body.length+' bytes');
+    analizarRespuesta(st, body);
+  };
+
+  xhr.onerror = function(){
+    var ms = Date.now()-t0;
+    log('[P2] XHR onerror ms='+ms);
+    addRow('p2','❌','err','Error de red',
+      'El celular no pudo llegar al servidor.<br>'
+      +'Causas:<br>'
+      +'• Sin internet<br>'
+      +'• El navegador bloqueó la conexión (CORS en iOS Safari)<br>'
+      +'• URL incorrecta');
+    addRow('res','🚫','err','CAUSA: Error de red / CORS',
+      'Intenta abrir esta URL directamente en Safari:<br>'+esc(url)+'?action=load');
+    log('[P2] FAIL: onerror'); finish('');
+  };
+
+  xhr.ontimeout = function(){
+    log('[P2] XHR timeout 15s');
+    addRow('p2','❌','err','Tiempo agotado (15s)',
+      'El servidor no respondió en 15 segundos.');
+    finish('');
+  };
+
+  xhr.timeout = 15000;
   try{
-    res = await fetch(url+'?action=load', {method:'GET', redirect:'follow', cache:'no-cache'});
-    ms = Date.now()-t0;
-    rawText = await res.text();
-  } catch(fetchErr){
-    ms = Date.now()-t0;
-    addStep('p3','❌','err','Paso 3: Error de red ('+ms+'ms)',
-      fetchErr.message+'<br><br>Esto pasa cuando:<br>• No hay internet<br>• El navegador bloqueó la solicitud (CORS)<br>• La URL tiene un error de tipeo');
-    report('PASO 3','FAIL','fetch error: '+fetchErr.message); finish(rawText); return;
+    xhr.open('GET', url+'?action=load', true);
+    xhr.send();
+    log('[P2] XHR enviado');
+  } catch(e){
+    log('[P2] xhr.open/send exception: '+e.message);
+    addRow('p2','❌','err','Excepción al conectar',e.message);
+    finish('');
   }
+}
 
-  // PASO 4 — Analizar respuesta HTTP
-  addStep('p4','⏳','pending','Paso 4: Analizando respuesta…','');
-  await sleep(50);
-  report('PASO 3','OK','HTTP '+res.status+' en '+ms+'ms');
-  report('PASO 4','INFO','Status: '+res.status+' | Tipo: '+(rawText.trim()[0]==='{'?'JSON':'HTML/otro'));
+function analizarRespuesta(status, body){
+  var trimmed = (body||'').trim();
+  log('[P3] analizando body tipo='+(trimmed[0]==='{' ? 'JSON' : 'HTML/otro'));
 
-  if(res.status===200 && rawText.trim().startsWith('{')){
-    // Intentar parsear JSON
-    let data;
-    try{ data = JSON.parse(rawText); }
+  if(trimmed.charAt(0) === '{'){
+    var data;
+    try{ data = JSON.parse(body); }
     catch(e){
-      addStep('p4','❌','err','Paso 4: JSON inválido ('+ms+'ms)',
-        'El servidor respondió 200 pero el cuerpo no es JSON válido.');
-      report('PASO 4','FAIL','JSON parse error'); finish(rawText); return;
+      addRow('p3','❌','err','JSON inválido',e.message, body.slice(0,300));
+      log('[P3] FAIL JSON parse: '+e.message);
+      finish(body); return;
     }
-
-    if(data.success){
-      addStep('p4','✅','ok','Paso 4: ¡Conexión exitosa! ('+ms+'ms)',
-        '🏫 Escuela: '+(data.config&&data.config.schoolName||'(sin nombre)')+'<br>'+
-        '👥 Alumnos: '+((data.students||[]).length)+'<br>'+
-        '🎯 Totales: '+Object.keys(data.totals||{}).length+'<br>'+
-        '📝 Califs: '+Object.keys(data.raw||{}).length);
-      addStep('p5','✅','ok','✅ RESULTADO: Todo funciona correctamente',
-        'El sistema puede conectarse al servidor. Si en la app principal no funciona, el problema es la URL guardada en ese dispositivo, no el servidor.');
-      report('PASO 4','OK','success:true | alumnos:'+(data.students||[]).length);
-      report('RESULTADO','ÉXITO — El servidor responde correctamente');
+    if(data.success === true){
+      var a = (data.students||[]).length;
+      var t = Object.keys(data.totals||{}).length;
+      var c = Object.keys(data.raw||{}).length;
+      var esc2 = (data.config&&data.config.schoolName)||'(sin nombre)';
+      addRow('p3','✅','ok','JSON correcto — success: true',
+        '🏫 '+esc(esc2)+'<br>👥 '+a+' alumno(s)<br>🎯 '+t+' totales<br>📝 '+c+' califs');
+      addRow('res','🎉','ok','✅ EL SERVIDOR FUNCIONA BIEN',
+        'La conexión es correcta. Si en la app da error, el problema es cómo se guarda la URL en el dispositivo.');
+      log('[P3] OK success:true alumnos='+a);
     } else {
-      addStep('p4','❌','err','Paso 4: Servidor respondió error ('+ms+'ms)',
-        'success:false<br>Error: '+(data.error||'desconocido'));
-      report('PASO 4','FAIL','success:false: '+data.error); finish(rawText); return;
+      addRow('p3','❌','err','success: false',
+        'Error del servidor: '+esc(data.error||'desconocido'), body.slice(0,300));
+      log('[P3] FAIL success:false error='+data.error);
     }
 
-  } else if(rawText.includes('accounts.google.com')||rawText.includes('ServiceLogin')||rawText.includes('signin')){
-    addStep('p4','❌','err','Paso 4: Google pide inicio de sesión <span class="tag tag-err">ERROR PRINCIPAL</span>',
-      'El deployment de Apps Script <b>no permite acceso anónimo</b>.<br><br>'+
-      '<b>Solución:</b><br>'+
-      '1. Abre script.google.com<br>'+
-      '2. Implementar → Administrar implementaciones<br>'+
-      '3. ✏️ Editar → <b>Quién tiene acceso: Cualquier usuario, incluso anónimo</b><br>'+
-      '4. Nueva versión → Actualizar');
-    report('PASO 4','FAIL','Google login redirect — acceso no anónimo'); finish(rawText); return;
-
-  } else if(res.status===302||res.status===301){
-    addStep('p4','⚠️','warn','Paso 4: Redirección ('+res.status+')',
-      'El servidor redirigió la solicitud. Normalmente se sigue automáticamente.');
-    report('PASO 4','WARN','redirect '+res.status);
+  } else if(trimmed.indexOf('accounts.google.com')>=0 || trimmed.indexOf('ServiceLogin')>=0 || trimmed.indexOf('google.com/accounts')>=0){
+    addRow('p3','🔐','err','Google pide inicio de sesión — ESTE ES EL PROBLEMA',
+      '<b>El Apps Script NO tiene acceso anónimo.</b><br><br>'
+      +'Pasos para corregir (en la PC):<br>'
+      +'1. script.google.com<br>'
+      +'2. Implementar → Administrar implementaciones<br>'
+      +'3. ✏️ Editar → "Quién tiene acceso":<br>'
+      +'   → <b>Cualquier usuario, incluso anónimo</b><br>'
+      +'4. Nueva versión → Actualizar');
+    addRow('res','🔐','err','CAUSA: El deployment no es público','Cambiar acceso en Apps Script.');
+    log('[P3] FAIL: Google login redirect');
 
   } else {
-    addStep('p4','❌','err','Paso 4: Respuesta inesperada HTTP '+res.status+' ('+ms+'ms)',
-      'El servidor no devolvió JSON. Revisa que el Code.gs esté completo y hayas implementado.');
-    report('PASO 4','FAIL','HTTP '+res.status+' body: '+rawText.slice(0,100));
-    finish(rawText); return;
+    addRow('p3','⚠️','warn','Respuesta inesperada HTTP '+status,
+      'No es JSON ni login de Google.', body.slice(0,300));
+    log('[P3] WARN: inesperado HTTP='+status+' body='+body.slice(0,100));
   }
 
-  finish(rawText);
+  finish(body);
 }
 
-function report(step, status, detail){
-  fullReport += '['+step+'] '+status+(detail?' — '+detail:'')+'\n';
-}
-
-function finish(rawText){
-  fullReport += '\n=== FIN DEL REPORTE ===\n';
-  if(rawText){
-    fullReport += '\n--- RESPUESTA CRUDA (primeros 800 chars) ---\n'+rawText.slice(0,800)+'\n';
-    document.getElementById('rawCard').style.display='';
-    document.getElementById('rawBox').textContent = rawText.slice(0,800)+(rawText.length>800?'\n…':'' );
+function finish(body){
+  if(body && body.length > 0){
+    document.getElementById('rawCard').style.display = '';
+    document.getElementById('rawBox').textContent =
+      body.slice(0,600)+(body.length>600?'\n…('+body.length+' chars total)':'');
   }
+  log('');
+  log('=== FIN DEL REPORTE ===');
   document.getElementById('copyBtn').style.display = 'block';
 }
 
 function copyReport(){
-  navigator.clipboard.writeText(fullReport).then(()=>{
-    document.getElementById('copyBtn').textContent='✅ ¡Copiado! Pégaselo a Claude';
-    setTimeout(()=>{ document.getElementById('copyBtn').textContent='📋 Copiar reporte completo'; },3000);
-  }).catch(()=>{
-    // fallback
-    const ta=document.createElement('textarea');
-    ta.value=fullReport; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta);
-    document.getElementById('copyBtn').textContent='✅ ¡Copiado!';
-  });
+  var text = lines.join('\n');
+  var ta = document.getElementById('copyArea');
+  ta.value = text;
+  ta.style.display = 'block';
+  ta.select();
+  try{ document.execCommand('copy'); } catch(e){}
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).catch(function(){});
+  }
+  document.getElementById('copyBtn').textContent = '✅ Copiado — ahora pégalo en Claude';
 }
-
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 </script>
 </body>
 </html>
