@@ -9,224 +9,256 @@
 <title>Sistema de Calificaciones</title>
 <style>
 :root {
-  --bg: #0d1117; --bg2: #161b22; --bg3: #1c2333; --card: #21262d;
-  --border: #30363d; --accent: #2563eb; --accent2: #1d4ed8;
-  --green: #16a34a; --red: #dc2626; --yellow: #d97706; --purple: #7c3aed;
-  --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
-  --radius: 8px; --radius2: 12px;
+  --bg:#0d1117; --bg2:#161b22; --bg3:#1c2333; --card:#21262d;
+  --border:#30363d; --accent:#2563eb; --accent2:#1d4ed8;
+  --green:#16a34a; --red:#dc2626; --yellow:#d97706; --purple:#7c3aed;
+  --text:#e6edf3; --text2:#8b949e; --text3:#6e7681;
+  --radius:8px; --radius2:12px;
 }
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
 
-/* ── LOGIN ──────────────────────────────────────────────────── */
-#loginScreen { position:fixed; inset:0; background:var(--bg); display:flex;
-  align-items:center; justify-content:center; z-index:9999; padding:20px; }
-#loginScreen.hidden { display:none; }
-.login-box { background:var(--card); border:1px solid var(--border);
-  border-radius:var(--radius2); padding:36px 32px; width:100%; max-width:380px; }
-.login-logo { text-align:center; margin-bottom:28px; }
-.login-logo img { max-width:120px; max-height:80px; border-radius:8px; margin-bottom:10px; }
-.login-logo h1 { font-size:1.2rem; font-weight:700; }
-.login-logo p { color:var(--text2); font-size:.85rem; margin-top:4px; }
-.login-url { background:var(--bg3); border-radius:6px; padding:10px 12px;
-  margin-bottom:16px; font-size:.8rem; color:var(--text2); text-align:center; }
-.login-url.no-url { color:var(--yellow); cursor:pointer; }
-.field { margin-bottom:14px; }
-.field label { display:block; font-size:.8rem; color:var(--text2);
-  margin-bottom:5px; font-weight:500; }
-.field input { width:100%; background:var(--bg3); border:1px solid var(--border);
-  border-radius:var(--radius); padding:10px 12px; color:var(--text);
-  font-size:.9rem; outline:none; }
-.field input:focus { border-color:var(--accent); }
-.btn-login { width:100%; background:var(--accent); color:#fff; border:none;
-  border-radius:var(--radius); padding:12px; font-size:.95rem; font-weight:600;
-  cursor:pointer; margin-top:6px; }
-.btn-login:hover { background:var(--accent2); }
-.login-err { color:var(--red); font-size:.8rem; margin-top:10px;
-  text-align:center; display:none; }
-.login-err.show { display:block; }
+/* ── LOGIN ─────────────────────────────────────────── */
+#loginScreen{position:fixed;inset:0;display:flex;align-items:center;
+  justify-content:center;z-index:9999;padding:20px;overflow:hidden;}
+#loginScreen.hidden{display:none;}
 
-/* ── HEADER ─────────────────────────────────────────────────── */
-header { background:var(--bg2); border-bottom:1px solid var(--border);
-  padding:10px 16px; display:flex; align-items:center; gap:10px; position:sticky;
-  top:0; z-index:100; }
-.hdr-logo { width:32px; height:32px; border-radius:6px; object-fit:cover; }
-.hdr-logo-placeholder { width:32px; height:32px; border-radius:6px;
-  background:var(--accent); display:flex; align-items:center;
-  justify-content:center; font-size:16px; flex-shrink:0; }
-.hdr-info { flex:1; min-width:0; }
-.hdr-title { font-weight:700; font-size:.95rem;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.hdr-sub { font-size:.75rem; color:var(--text2); }
-.hdr-sync { display:flex; align-items:center; gap:6px; }
-.sync-dot { width:8px; height:8px; border-radius:50%; background:var(--text3); }
-.sync-dot.ok { background:var(--green); }
-.sync-dot.syncing { background:var(--yellow); animation:pulse .8s infinite; }
-.sync-dot.err { background:var(--red); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-.hdr-sync-time { font-size:.72rem; color:var(--text2); }
-.btn-icon { background:none; border:1px solid var(--border); border-radius:6px;
-  padding:5px 8px; color:var(--text2); cursor:pointer; font-size:.8rem; }
-.btn-icon:hover { border-color:var(--accent); color:var(--accent); }
+/* Fondo animado con partículas */
+.login-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse at 20% 50%, rgba(37,99,235,.15) 0%, transparent 60%),
+  radial-gradient(ellipse at 80% 20%, rgba(124,58,237,.12) 0%, transparent 50%),
+  radial-gradient(ellipse at 60% 80%, rgba(37,99,235,.08) 0%, transparent 40%),
+  #0d1117;
+  overflow:hidden;}
+.login-bg::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(255,255,255,.01) 60px,rgba(255,255,255,.01) 61px),
+             repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(255,255,255,.01) 60px,rgba(255,255,255,.01) 61px);}
+@keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.05)}}
+@keyframes float2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-25px,15px) scale(.95)}}
+@keyframes float3{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,10px)}66%{transform:translate(-10px,-15px)}}
+.orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;}
+.orb1{width:400px;height:400px;background:rgba(37,99,235,.2);top:-100px;left:-100px;animation:float1 8s ease-in-out infinite;}
+.orb2{width:300px;height:300px;background:rgba(124,58,237,.15);bottom:-80px;right:-80px;animation:float2 10s ease-in-out infinite;}
+.orb3{width:200px;height:200px;background:rgba(37,99,235,.12);top:40%;right:20%;animation:float3 12s ease-in-out infinite;}
 
-/* ── NAV ────────────────────────────────────────────────────── */
-nav { background:var(--bg2); border-bottom:1px solid var(--border);
-  display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-nav::-webkit-scrollbar { display:none; }
-.nav-btn { flex:0 0 auto; padding:11px 16px; background:none; border:none;
-  color:var(--text2); cursor:pointer; font-size:.8rem; white-space:nowrap;
-  border-bottom:2px solid transparent; display:flex; flex-direction:column;
-  align-items:center; gap:2px; min-width:60px; }
-.nav-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
-.nav-btn .nav-ico { font-size:1.1rem; }
+/* Caja de login con animación de entrada */
+@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+.login-box{position:relative;background:rgba(33,38,45,.92);backdrop-filter:blur(20px);
+  border:1px solid rgba(48,54,61,.8);border-radius:20px;padding:40px 36px;
+  width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.5);
+  animation:slideUp .5s cubic-bezier(.22,.68,0,1.2) both;}
 
-/* ── MAIN ────────────────────────────────────────────────────── */
-main { padding:16px; max-width:960px; margin:0 auto; }
-.tab { display:none; }
-.tab.active { display:block; }
+/* Logo */
+@keyframes logoPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo-img-wrap{display:inline-flex;align-items:center;justify-content:center;
+  width:72px;height:72px;border-radius:16px;background:rgba(37,99,235,.15);
+  border:1px solid rgba(37,99,235,.3);margin-bottom:14px;
+  animation:logoPop .6s .2s cubic-bezier(.22,.68,0,1.2) both;}
+.login-logo-img-wrap img{width:56px;height:56px;border-radius:10px;object-fit:cover;}
+.login-logo-img-wrap .logo-emoji{font-size:2rem;}
+.login-logo h1{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;}
+.login-logo .login-inst{color:var(--text2);font-size:.82rem;margin-top:5px;
+  display:flex;align-items:center;justify-content:center;gap:5px;}
+.login-logo .login-inst::before,.login-logo .login-inst::after{
+  content:'';flex:1;height:1px;background:var(--border);max-width:50px;}
 
-/* ── CARDS & SECTIONS ────────────────────────────────────────── */
-.card { background:var(--card); border:1px solid var(--border);
-  border-radius:var(--radius2); padding:16px; margin-bottom:14px; }
-.card-title { font-size:.85rem; font-weight:600; color:var(--text2);
-  text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
-.row { display:flex; gap:10px; flex-wrap:wrap; }
-.row .field { flex:1; min-width:140px; }
+/* Campos */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:.78rem;color:var(--text2);margin-bottom:5px;font-weight:500;letter-spacing:.03em;}
+.field input{width:100%;background:rgba(13,20,36,.8);border:1px solid var(--border);
+  border-radius:var(--radius);padding:11px 14px;color:var(--text);
+  font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15);}
 
-/* ── BUTTONS ─────────────────────────────────────────────────── */
-.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px;
-  border-radius:var(--radius); border:none; cursor:pointer; font-size:.85rem;
-  font-weight:500; }
-.btn-primary { background:var(--accent); color:#fff; }
-.btn-primary:hover { background:var(--accent2); }
-.btn-danger { background:var(--red); color:#fff; }
-.btn-success { background:var(--green); color:#fff; }
-.btn-outline { background:none; border:1px solid var(--border); color:var(--text2); }
-.btn-outline:hover { border-color:var(--accent); color:var(--accent); }
-.btn-sm { padding:5px 10px; font-size:.78rem; }
+/* Botón entrar */
+.btn-login{width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;
+  border:none;border-radius:var(--radius);padding:13px;font-size:.95rem;font-weight:600;
+  cursor:pointer;margin-top:6px;letter-spacing:.02em;
+  box-shadow:0 4px 14px rgba(37,99,235,.35);transition:transform .15s,box-shadow .15s;}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.45);}
+.btn-login:active{transform:translateY(0);}
+.login-err{color:#f87171;font-size:.8rem;margin-top:10px;text-align:center;display:none;
+  background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.25);border-radius:6px;padding:8px;}
+.login-err.show{display:block;}
+.login-footer{display:flex;justify-content:center;margin-top:18px;}
+.login-reset{background:none;border:none;color:var(--text3);font-size:.72rem;
+  cursor:pointer;text-decoration:underline;padding:4px 8px;}
+.login-reset:hover{color:var(--text2);}
 
-/* ── FORMS ────────────────────────────────────────────────────── */
-input, select { width:100%; background:var(--bg3); border:1px solid var(--border);
-  border-radius:var(--radius); padding:8px 10px; color:var(--text);
-  font-size:.85rem; outline:none; }
-input:focus, select:focus { border-color:var(--accent); }
-input[type=number] { -moz-appearance:textfield; }
-input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+/* ── HEADER ─────────────────────────────────────────── */
+header{background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;
+  position:sticky;top:0;z-index:100;}
+.hdr-logo{width:32px;height:32px;border-radius:6px;object-fit:cover;}
+.hdr-logo-placeholder{width:32px;height:32px;border-radius:6px;
+  background:var(--accent);display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;cursor:pointer;}
+.hdr-info{flex:1;min-width:0;}
+.hdr-title{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hdr-sub{font-size:.75rem;color:var(--text2);}
+.hdr-sync{display:flex;align-items:center;gap:6px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.syncing{background:var(--yellow);animation:pulse .8s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-sync-time{font-size:.72rem;color:var(--text2);}
+.btn-icon{background:none;border:1px solid var(--border);border-radius:6px;
+  padding:5px 8px;color:var(--text2);cursor:pointer;font-size:.8rem;}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);}
 
-/* ── TABLE ────────────────────────────────────────────────────── */
-.tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-table { width:100%; border-collapse:collapse; min-width:500px; }
-th { background:var(--bg3); padding:8px 10px; text-align:left;
-  font-size:.75rem; color:var(--text2); font-weight:600;
-  text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
-td { padding:7px 10px; border-bottom:1px solid var(--border);
-  font-size:.83rem; }
-tr:last-child td { border-bottom:none; }
-tr:hover td { background:rgba(255,255,255,.02); }
-td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
+/* ── NAV ────────────────────────────────────────────── */
+nav{background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex:0 0 auto;padding:11px 16px;background:none;border:none;
+  color:var(--text2);cursor:pointer;font-size:.8rem;white-space:nowrap;
+  border-bottom:2px solid transparent;display:flex;flex-direction:column;
+  align-items:center;gap:2px;min-width:60px;}
+.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.nav-btn .nav-ico{font-size:1.1rem;}
 
-/* ── GRADES HEADER ────────────────────────────────────────────── */
-.subject-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
-.subject-tab { padding:6px 12px; border-radius:20px; border:1px solid var(--border);
-  background:none; color:var(--text2); cursor:pointer; font-size:.8rem; }
-.subject-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-.bim-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-.bim-tab { padding:5px 11px; border-radius:20px; border:1px solid var(--border);
-  background:none; color:var(--text2); cursor:pointer; font-size:.78rem; }
-.bim-tab.active { background:var(--purple); border-color:var(--purple); color:#fff; }
+/* ── MAIN ───────────────────────────────────────────── */
+main{padding:16px;max-width:960px;margin:0 auto;}
+.tab{display:none;} .tab.active{display:block;}
 
-/* ── WEIGHT ROW ──────────────────────────────────────────────── */
-.weight-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-  padding:10px; background:var(--bg3); border-radius:var(--radius);
-  margin-bottom:12px; }
-.weight-item { display:flex; align-items:center; gap:5px; }
-.weight-item label { font-size:.75rem; color:var(--text2); white-space:nowrap; }
-.weight-item input { width:55px; }
-.weight-total { font-size:.78rem; padding:4px 8px; border-radius:4px;
-  font-weight:600; }
-.weight-total.ok { background:rgba(22,163,74,.15); color:#4ade80; }
-.weight-total.bad { background:rgba(220,38,38,.15); color:#f87171; }
+/* ── CARDS ──────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius2);padding:16px;margin-bottom:14px;}
+.card-title{font-size:.85rem;font-weight:600;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;}
+.row{display:flex;gap:10px;flex-wrap:wrap;}
+.row .field{flex:1;min-width:140px;}
 
-/* ── GRADE BADGE ─────────────────────────────────────────────── */
-.grade-val { font-weight:700; }
-.MB { color:#4ade80; } .B { color:#60a5fa; }
-.S { color:#fbbf24; } .NS { color:#f87171; }
-.grade-cell { text-align:center; }
+/* ── BOTONES ────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+  border-radius:var(--radius);border:none;cursor:pointer;font-size:.85rem;font-weight:500;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text2);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:5px 10px;font-size:.78rem;}
+.btn-warning{background:var(--yellow);color:#fff;}
 
-/* ── STUDENT ACTIONS ─────────────────────────────────────────── */
-.student-row td:first-child { font-weight:500; }
-.del-btn { background:none; border:none; color:var(--red);
-  cursor:pointer; padding:3px 6px; border-radius:4px; font-size:.85rem; }
-.del-btn:hover { background:rgba(220,38,38,.12); }
-.edit-btn { background:none; border:none; color:var(--accent);
-  cursor:pointer; padding:3px 6px; border-radius:4px; font-size:.85rem; }
-.add-student-row { display:flex; gap:8px; margin-top:10px; }
-.add-student-row input { flex:1; }
+/* ── FORMS ──────────────────────────────────────────── */
+input,select{width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:.85rem;outline:none;}
+input:focus,select:focus{border-color:var(--accent);}
+input[type=number]{-moz-appearance:textfield;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
-/* ── REPORTS ─────────────────────────────────────────────────── */
-.report-filter { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-.report-filter select { flex:1; min-width:120px; }
-.report-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-.summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-.summary-card { flex:1; min-width:80px; background:var(--bg3);
-  border-radius:var(--radius); padding:10px; text-align:center; }
-.summary-card .s-val { font-size:1.4rem; font-weight:700; }
-.summary-card .s-lbl { font-size:.72rem; color:var(--text2); margin-top:2px; }
+/* ── TABLE ──────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;min-width:500px;}
+th{background:var(--bg3);padding:8px 10px;text-align:left;font-size:.75rem;
+  color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+td{padding:7px 10px;border-bottom:1px solid var(--border);font-size:.83rem;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
 
-/* ── SYNC TAB ─────────────────────────────────────────────────── */
-.sync-status-box { display:flex; align-items:center; gap:12px; padding:14px;
-  background:var(--bg3); border-radius:var(--radius); margin-bottom:14px; }
-.sync-status-icon { font-size:1.6rem; }
-.sync-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-.url-row { display:flex; gap:8px; }
-.url-row input { flex:1; font-family:monospace; font-size:.78rem; }
-.info-box { background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.3);
-  border-radius:var(--radius); padding:12px; font-size:.8rem;
-  color:var(--text2); line-height:1.6; }
-.info-box strong { color:var(--text); }
+/* ── SUBJECT / BIM TABS ─────────────────────────────── */
+.subject-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.subject-tab{padding:6px 12px;border-radius:20px;border:1px solid var(--border);
+  background:none;color:var(--text2);cursor:pointer;font-size:.8rem;}
+.subject-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.bim-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.bim-tab{padding:5px 11px;border-radius:20px;border:1px solid var(--border);
+  background:none;color:var(--text2);cursor:pointer;font-size:.78rem;}
+.bim-tab.active{background:var(--purple);border-color:var(--purple);color:#fff;}
 
-/* ── TOAST ────────────────────────────────────────────────────── */
-#toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
-  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
-  padding:10px 18px; font-size:.83rem; opacity:0; transition:all .25s;
-  pointer-events:none; z-index:9000; white-space:nowrap; max-width:90vw; }
-#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-#toast.success { border-color:var(--green); color:#4ade80; }
-#toast.error { border-color:var(--red); color:#f87171; }
-#toast.warning { border-color:var(--yellow); color:#fbbf24; }
+/* ── WEIGHT ROW ─────────────────────────────────────── */
+.weight-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  padding:10px;background:var(--bg3);border-radius:var(--radius);margin-bottom:12px;}
+.weight-item{display:flex;align-items:center;gap:5px;}
+.weight-item label{font-size:.75rem;color:var(--text2);white-space:nowrap;}
+.weight-item input{width:55px;}
+.weight-total{font-size:.78rem;padding:4px 8px;border-radius:4px;font-weight:600;}
+.weight-total.ok{background:rgba(22,163,74,.15);color:#4ade80;}
+.weight-total.bad{background:rgba(220,38,38,.15);color:#f87171;}
 
-/* ── MODAL ────────────────────────────────────────────────────── */
-.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none;
-  align-items:center; justify-content:center; z-index:10000; padding:20px; }
-.modal-bg.show { display:flex; }
-.modal { background:var(--card); border:1px solid var(--border);
-  border-radius:var(--radius2); padding:24px; width:100%; max-width:440px; }
-.modal h3 { margin-bottom:16px; font-size:1rem; }
-.modal-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+/* ── GRADES ─────────────────────────────────────────── */
+.grade-val{font-weight:700;}
+.MB{color:#4ade80;} .B{color:#60a5fa;} .S{color:#fbbf24;} .NS{color:#f87171;}
+.grade-cell{text-align:center;}
 
-/* ── CONFIG LOGO ──────────────────────────────────────────────── */
-.logo-preview { width:80px; height:80px; border-radius:8px;
-  object-fit:cover; display:none; }
-.logo-placeholder { width:80px; height:80px; border-radius:8px;
-  background:var(--bg3); border:2px dashed var(--border);
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.8rem; cursor:pointer; }
+/* ── STUDENTS ───────────────────────────────────────── */
+.del-btn{background:none;border:none;color:var(--red);cursor:pointer;
+  padding:3px 6px;border-radius:4px;font-size:.85rem;}
+.del-btn:hover{background:rgba(220,38,38,.12);}
+.edit-btn{background:none;border:none;color:var(--accent);cursor:pointer;
+  padding:3px 6px;border-radius:4px;font-size:.85rem;}
+.add-student-row{display:flex;gap:8px;margin-top:10px;}
+.add-student-row input{flex:1;}
 
-/* ── PRINT ────────────────────────────────────────────────────── */
-@media print {
-  header, nav, .report-filter, .report-btns, #toast { display:none !important; }
-  body { background:#fff; color:#000; }
-  .card { border:1px solid #ccc; }
-  table { border:1px solid #ccc; }
-  th, td { border:1px solid #ddd; }
+/* ── REPORTS ────────────────────────────────────────── */
+.report-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.report-filter select{flex:1;min-width:120px;}
+.report-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.summary-card{flex:1;min-width:80px;background:var(--bg3);border-radius:var(--radius);
+  padding:10px;text-align:center;}
+.summary-card .s-val{font-size:1.4rem;font-weight:700;}
+.summary-card .s-lbl{font-size:.72rem;color:var(--text2);margin-top:2px;}
+
+/* ── SYNC ───────────────────────────────────────────── */
+.sync-status-box{display:flex;align-items:center;gap:12px;padding:14px;
+  background:var(--bg3);border-radius:var(--radius);margin-bottom:14px;}
+.sync-status-icon{font-size:1.6rem;}
+.sync-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.url-row{display:flex;gap:8px;}
+.url-row input{flex:1;font-family:monospace;font-size:.78rem;}
+.info-box{background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.3);
+  border-radius:var(--radius);padding:12px;font-size:.8rem;color:var(--text2);line-height:1.7;}
+.info-box strong{color:var(--text);}
+
+/* ── USUARIOS ───────────────────────────────────────── */
+.user-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;
+  border-radius:10px;font-size:.72rem;font-weight:600;}
+.user-badge.admin{background:rgba(124,58,237,.2);color:#a78bfa;}
+.user-badge.teacher{background:rgba(37,99,235,.2);color:#60a5fa;}
+.add-user-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.add-user-form input,.add-user-form select{flex:1;min-width:110px;}
+
+/* ── TOAST ──────────────────────────────────────────── */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 18px;font-size:.83rem;opacity:0;transition:all .25s;
+  pointer-events:none;z-index:9000;white-space:nowrap;max-width:90vw;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.success{border-color:var(--green);color:#4ade80;}
+#toast.error{border-color:var(--red);color:#f87171;}
+#toast.warning{border-color:var(--yellow);color:#fbbf24;}
+
+/* ── MODAL ──────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;
+  align-items:center;justify-content:center;z-index:10000;padding:20px;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius2);padding:24px;width:100%;max-width:440px;}
+.modal h3{margin-bottom:16px;font-size:1rem;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* ── CONFIG LOGO ────────────────────────────────────── */
+.logo-preview{width:80px;height:80px;border-radius:8px;object-fit:cover;display:none;}
+.logo-placeholder{width:80px;height:80px;border-radius:8px;background:var(--bg3);
+  border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;cursor:pointer;}
+
+/* ── PRINT ──────────────────────────────────────────── */
+@media print{
+  header,nav,.report-filter,.report-btns,#toast{display:none!important;}
+  body{background:#fff;color:#000;}
+  .card{border:1px solid #ccc;}
+  table{border:1px solid #ccc;}
+  th,td{border:1px solid #ddd;}
 }
-
-/* ── RESPONSIVE ───────────────────────────────────────────────── */
-@media (max-width: 480px) {
-  main { padding:10px; }
-  .card { padding:12px; }
-  .login-box { padding:24px 18px; }
+@media(max-width:480px){
+  main{padding:10px;} .card{padding:12px;} .login-box{padding:28px 20px;}
 }
 </style>
 </head>
@@ -234,44 +266,34 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 
 <!-- LOGIN -->
 <div id="loginScreen">
+  <div class="login-bg">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
   <div class="login-box">
     <div class="login-logo">
-      <img id="loginLogo" src="" style="display:none">
-      <div id="loginLogoPlaceholder" style="font-size:2.5rem; margin-bottom:8px;">🏫</div>
-      <h1 id="loginTitle">Sistema de Calificaciones</h1>
-      <p id="loginSubtitle">Inicia sesión para continuar</p>
-    </div>
-    <div id="loginUrlInfo" class="login-url no-url">
-      <div id="loginUrlText">⚠️ Sin conexión — ingresa la URL del Apps Script:</div>
-      <div style="display:flex;gap:6px;margin-top:7px;" id="loginUrlForm">
-        <input type="text" id="loginUrlField"
-               placeholder="https://script.google.com/macros/s/.../exec"
-               style="flex:1;font-size:.72rem;padding:6px 8px;"
-               onkeydown="if(event.key==='Enter') saveApiUrlFromLogin()">
-        <button onclick="saveApiUrlFromLogin()"
-                style="background:var(--accent);color:#fff;border:none;border-radius:6px;
-                       padding:6px 10px;cursor:pointer;font-size:.78rem;white-space:nowrap;flex-shrink:0;">
-          Guardar
-        </button>
+      <div class="login-logo-img-wrap" id="loginLogoWrap">
+        <span class="logo-emoji">🏫</span>
       </div>
+      <h1 id="loginTitle">Sistema de Calificaciones</h1>
+      <p class="login-inst" id="loginSubtitle">Ingresa a tu cuenta institucional</p>
     </div>
     <div class="field">
-      <label>Usuario</label>
+      <label>USUARIO</label>
       <input type="text" id="loginUser" placeholder="usuario" autocomplete="username"
-             onkeydown="if(event.key==='Enter') doLogin()">
+             onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
     </div>
     <div class="field">
-      <label>Contraseña</label>
-      <input type="password" id="loginPass" placeholder="••••••"
+      <label>CONTRASEÑA</label>
+      <input type="password" id="loginPass" placeholder="••••••••"
              autocomplete="current-password"
              onkeydown="if(event.key==='Enter') doLogin()">
     </div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="loginErr"></div>
-    <div style="text-align:center;margin-top:14px;">
-      <button onclick="resetCredentials()"
-        style="background:none;border:none;color:var(--text3);font-size:.72rem;
-               cursor:pointer;text-decoration:underline;">
+    <div class="login-footer">
+      <button class="login-reset" onclick="resetCredentials()">
         ¿Problemas para entrar? Restablecer credenciales
       </button>
     </div>
@@ -296,13 +318,15 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 <!-- NAV -->
 <nav>
   <button class="nav-btn active" id="nav-config"   onclick="goTab('config')">
-    <span class="nav-ico">⚙️</span>Configuración</button>
+    <span class="nav-ico">⚙️</span>Config</button>
   <button class="nav-btn" id="nav-students" onclick="goTab('students')">
     <span class="nav-ico">👥</span>Alumnos</button>
   <button class="nav-btn" id="nav-grades"   onclick="goTab('grades')">
     <span class="nav-ico">✏️</span>Calificaciones</button>
   <button class="nav-btn" id="nav-reports"  onclick="goTab('reports')">
     <span class="nav-ico">📊</span>Reportes</button>
+  <button class="nav-btn" id="nav-usuarios" onclick="goTab('usuarios')">
+    <span class="nav-ico">🔑</span>Usuarios</button>
   <button class="nav-btn" id="nav-sync"     onclick="goTab('sync')">
     <span class="nav-ico">☁️</span>Sincronizar</button>
 </nav>
@@ -336,20 +360,21 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
   </div>
   <div class="card">
     <div class="card-title">🖼️ Logo / Foto de la Escuela</div>
-    <div style="display:flex; align-items:center; gap:14px;">
+    <div style="display:flex;align-items:center;gap:14px;">
       <img id="logoPreview" class="logo-preview">
-      <div id="logoPlaceholder" class="logo-placeholder" onclick="document.getElementById('logoFile').click()">🏫</div>
-      <div style="font-size:.82rem; color:var(--text2); line-height:1.7;">
+      <div id="logoPlaceholder" class="logo-placeholder"
+           onclick="document.getElementById('logoFile').click()">🏫</div>
+      <div style="font-size:.82rem;color:var(--text2);line-height:1.8;">
         Formatos: JPG, PNG, WEBP<br>Máximo 2MB<br>
-        <a href="#" onclick="clearLogo(); return false;"
-           style="color:var(--red); text-decoration:none;">🗑️ Quitar logo</a>
+        <a href="#" onclick="clearLogo();return false;"
+           style="color:var(--red);text-decoration:none;">🗑️ Quitar logo</a>
       </div>
     </div>
     <input type="file" id="logoFile" accept="image/*" style="display:none"
            onchange="loadLogo(this)">
   </div>
   <div class="card">
-    <div class="card-title">🔒 Cambiar Contraseña</div>
+    <div class="card-title">🔒 Cambiar Mi Contraseña</div>
     <div class="row">
       <div class="field"><label>Contraseña actual</label>
         <input type="password" id="pwdOld"></div>
@@ -366,15 +391,11 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 <div class="tab" id="tab-students">
   <div class="card">
     <div class="card-title">👥 Lista de Alumnos
-      <span id="studentCount" style="font-weight:400; color:var(--text3);"></span>
+      <span id="studentCount" style="font-weight:400;color:var(--text3);"></span>
     </div>
     <div class="tbl-wrap">
-      <table id="studentsTable">
-        <thead><tr>
-          <th>#</th>
-          <th>Nombre</th>
-          <th style="width:90px;">Acciones</th>
-        </tr></thead>
+      <table>
+        <thead><tr><th>#</th><th>Nombre</th><th style="width:90px;">Acciones</th></tr></thead>
         <tbody id="studentsTbody"></tbody>
       </table>
     </div>
@@ -389,30 +410,27 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 <!-- TAB: CALIFICACIONES -->
 <div class="tab" id="tab-grades">
   <div class="card" style="padding-bottom:8px;">
-    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-      <span style="font-size:.8rem; color:var(--text2);">Materia:</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <span style="font-size:.8rem;color:var(--text2);">Materia:</span>
       <div class="subject-tabs" id="subjectTabs" style="margin:0;"></div>
     </div>
-    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <span style="font-size:.8rem; color:var(--text2);">Bimestre:</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:.8rem;color:var(--text2);">Bimestre:</span>
       <div class="bim-tabs" id="bimTabs" style="margin:0;"></div>
     </div>
   </div>
   <div class="card">
     <div class="card-title">⚖️ Porcentajes del Bimestre
-      <span id="weightsLabel" style="font-weight:400; color:var(--text3); text-transform:none;"></span>
+      <span id="weightsLabel" style="font-weight:400;color:var(--text3);text-transform:none;"></span>
     </div>
     <div class="weight-row" id="weightRow"></div>
   </div>
   <div class="card">
     <div class="card-title" id="gradesLabel">✏️ Captura de Calificaciones</div>
     <div class="tbl-wrap">
-      <table id="gradesTable">
-        <thead id="gradesHead"></thead>
-        <tbody id="gradesTbody"></tbody>
-      </table>
+      <table><thead id="gradesHead"></thead><tbody id="gradesTbody"></tbody></table>
     </div>
-    <div style="margin-top:10px; display:flex; gap:8px;">
+    <div style="margin-top:10px;display:flex;gap:8px;">
       <button class="btn btn-primary" onclick="saveGrades()">💾 Guardar</button>
       <button class="btn btn-outline" onclick="renderGradesTable()">🔄 Actualizar</button>
     </div>
@@ -437,10 +455,35 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
     </div>
     <div class="summary-row" id="rptSummary"></div>
     <div class="tbl-wrap">
-      <table id="rptTable">
-        <thead id="rptHead"></thead>
-        <tbody id="rptBody"></tbody>
+      <table><thead id="rptHead"></thead><tbody id="rptBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: USUARIOS -->
+<div class="tab" id="tab-usuarios">
+  <div class="card">
+    <div class="card-title">🔑 Gestión de Usuarios</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Usuario</th><th>Nombre</th><th>Rol</th><th style="width:100px;">Acciones</th>
+        </tr></thead>
+        <tbody id="usersTbody"></tbody>
       </table>
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div class="card-title">➕ Agregar Usuario</div>
+      <div class="add-user-form">
+        <input id="newUsername"  placeholder="usuario (sin espacios)" style="text-transform:lowercase;">
+        <input id="newUserDisplay" placeholder="Nombre completo">
+        <input type="password" id="newUserPass" placeholder="Contraseña">
+        <select id="newUserRole">
+          <option value="teacher">👩‍🏫 Docente</option>
+          <option value="admin">🛡️ Administrador</option>
+        </select>
+        <button class="btn btn-primary" onclick="addUser()">➕ Agregar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -453,32 +496,32 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
       <div class="sync-status-icon" id="syncIcon">⚪</div>
       <div>
         <div id="syncStatusText" style="font-weight:600;">Sin configurar</div>
-        <div id="syncLastTime" style="font-size:.78rem; color:var(--text2);">–</div>
+        <div id="syncLastTime" style="font-size:.78rem;color:var(--text2);">–</div>
       </div>
     </div>
     <div class="sync-btns">
-      <button class="btn btn-primary" onclick="doSync()">⬇️ Actualizar desde nube</button>
-      <button class="btn btn-outline" onclick="doUpload(false)">⬆️ Subir a nube</button>
-      <button class="btn btn-success" onclick="doUpload(true)">⬆️⭐ Subir con logo</button>
+      <button class="btn btn-primary"  onclick="doSync()">⬇️ Actualizar desde nube</button>
+      <button class="btn btn-outline"  onclick="doUpload(false)">⬆️ Subir a nube</button>
+      <button class="btn btn-success"  onclick="doUpload(true)">⬆️⭐ Subir con logo</button>
+      <button class="btn btn-warning btn-sm" onclick="clearCache()">🗑️ Limpiar caché</button>
     </div>
   </div>
   <div class="card">
     <div class="card-title">🔗 URL del Apps Script</div>
     <div class="url-row">
-      <input type="url" id="apiUrlInput"
-             placeholder="https://script.google.com/macros/s/.../exec"
-             onkeydown="if(event.key==='Enter') saveApiUrl()">
+      <input type="text" id="apiUrlInput"
+             placeholder="https://script.google.com/macros/s/.../exec">
       <button class="btn btn-primary" onclick="saveApiUrl()">Guardar</button>
     </div>
-    <div id="apiUrlStatus" style="font-size:.78rem; color:var(--text3); margin-top:6px;"></div>
+    <div id="apiUrlStatus" style="font-size:.78rem;color:var(--text3);margin-top:6px;"></div>
   </div>
   <div class="card">
     <div class="info-box">
       <strong>Cómo configurar:</strong><br>
       1. Abre <strong>script.google.com</strong> → pega el Code.gs<br>
       2. <strong>Implementar</strong> → Web app → Ejecutar como: <em>Yo</em><br>
-      3. Quién tiene acceso: <strong>Cualquier usuario (incluso anónimo)</strong><br>
-      4. Copia la URL y pégala arriba<br>
+      3. Quién tiene acceso: <strong>Cualquier usuario, incluso anónimo</strong><br>
+      4. Copia la URL y pégala arriba → Guardar<br>
       5. Presiona <strong>⬆️ Subir a nube</strong> desde la PC<br>
       6. En el celular presiona <strong>⬇️ Actualizar</strong>
     </div>
@@ -487,460 +530,462 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
 
 </main>
 
-<!-- URL MODAL -->
-<div class="modal-bg" id="urlModal">
+<div id="toast"></div>
+
+<!-- MODAL EDITAR USUARIO -->
+<div class="modal-bg" id="editUserModal">
   <div class="modal">
-    <h3>🔗 Configurar URL del Apps Script</h3>
-    <div class="field">
-      <label>URL del Web App</label>
-      <input type="url" id="modalUrlInput"
-             placeholder="https://script.google.com/macros/s/.../exec">
+    <h3>✏️ Editar Usuario</h3>
+    <input type="hidden" id="editUsername">
+    <div class="field"><label>Nombre Completo</label>
+      <input id="editUserDisplay"></div>
+    <div class="field"><label>Rol</label>
+      <select id="editUserRole">
+        <option value="teacher">👩‍🏫 Docente</option>
+        <option value="admin">🛡️ Administrador</option>
+      </select>
     </div>
+    <div class="field"><label>Nueva Contraseña (dejar vacío = no cambiar)</label>
+      <input type="password" id="editUserPass" placeholder="••••••"></div>
     <div class="modal-btns">
-      <button class="btn btn-outline" onclick="closeUrlModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveApiUrlFromModal()">Guardar</button>
+      <button class="btn btn-outline" onclick="closeEditUser()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditUser()">💾 Guardar</button>
     </div>
   </div>
 </div>
 
-<div id="toast"></div>
-
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script>
 'use strict';
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    CONSTANTES
-═══════════════════════════════════════════════════════════════ */
-const SUBJECTS  = ['Lenguajes','Saberes','Ética','Humano'];
-const CRITERIA  = ['tareas','trabajos','disciplina','examen'];
-const CRIT_LABELS = { tareas:'Tareas', trabajos:'Trabajos',
-                      disciplina:'Disciplina', examen:'Examen' };
-const DEF_W     = { tareas:20, trabajos:20, disciplina:20, examen:40 };
-const USERS_KEY = 'calif_users';
+═══════════════════════════════════════════════════ */
+const SUBJECTS    = ['Lenguajes','Saberes','Ética','Humano'];
+const CRITERIA    = ['tareas','trabajos','disciplina','examen'];
+const CRIT_LABELS = {tareas:'Tareas',trabajos:'Trabajos',disciplina:'Disciplina',examen:'Examen'};
+const DEF_W       = {tareas:20,trabajos:20,disciplina:20,examen:40};
+const USERS_KEY   = 'calif_users';
 const SESSION_KEY = 'calif_session';
 const API_URL_KEY = 'calif_api_url';
 
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    ESTADO
-═══════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════ */
 let STATE = {
-  config:   { schoolName:'', year:'', grade:'', group:'', bimestres:5 },
-  students: [],    // [{id,name}]
-  weights:  {},    // {'Lenguajes_1':{tareas,trabajos,disciplina,examen}}
-  raw:      {},    // {'studentId_Lenguajes_1':{t_ent,t_tot,w_ent,w_tot,disc,e_ent,e_tot}}
+  config:   {schoolName:'',year:'',grade:'',group:'',bimestres:5},
+  students: [],
+  weights:  {},
+  raw:      {},
   logo:     null,
 };
-
-let currentUser   = null;
-let curSubject    = SUBJECTS[0];
-let curBim        = 1;
-let isSyncing     = false;
+let currentUser    = null;
+let curSubject     = SUBJECTS[0];
+let curBim         = 1;
+let isSyncing      = false;
 let syncIntervalId = null;
 
-/* ═══════════════════════════════════════════════════════════════
-   PERSISTENCIA LOCAL  (igual que el hotel: localStorage)
-═══════════════════════════════════════════════════════════════ */
-function lsGet(k, def=null) {
-  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }
-  catch(e) { return def; }
-}
-function lsSet(k, v) {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){}
-}
-function lsDel(k) { try { localStorage.removeItem(k); } catch(e){} }
+/* ═══════════════════════════════════════════════════
+   LOCAL STORAGE
+═══════════════════════════════════════════════════ */
+function lsGet(k,def=null){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch(e){return def;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
 
-function loadLocal() {
+function loadLocal(){
   STATE.config   = lsGet('calif_config',   STATE.config);
   STATE.students = lsGet('calif_students', []);
   STATE.weights  = lsGet('calif_weights',  {});
   STATE.raw      = lsGet('calif_raw',      {});
-  try { STATE.logo = localStorage.getItem('calif_logo') || null; } catch(e){}
+  try{STATE.logo=localStorage.getItem('calif_logo')||null;}catch(e){}
 }
-function saveLocal() {
+function saveLocal(){
   lsSet('calif_config',   STATE.config);
   lsSet('calif_students', STATE.students);
   lsSet('calif_weights',  STATE.weights);
   lsSet('calif_raw',      STATE.raw);
-  try { if (STATE.logo) localStorage.setItem('calif_logo', STATE.logo);
-        else localStorage.removeItem('calif_logo'); } catch(e){}
+  try{if(STATE.logo)localStorage.setItem('calif_logo',STATE.logo);
+      else localStorage.removeItem('calif_logo');}catch(e){}
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   API  —  IDÉNTICO AL HOTEL SHERATON
-   GET  → cargar datos     (igual que apiGet del hotel)
-   POST → guardar datos    (igual que apiPost del hotel en login)
-═══════════════════════════════════════════════════════════════ */
-function getApiUrl() { return localStorage.getItem(API_URL_KEY) || ''; }
+/* ═══════════════════════════════════════════════════
+   API — ARQUITECTURA HOTEL SHERATON
+   GET  → cargar   POST text/plain → guardar
+═══════════════════════════════════════════════════ */
+function getApiUrl(){return localStorage.getItem(API_URL_KEY)||'';}
 
-// GET  — igual que apiGet del hotel
-function apiGet(action, params={}) {
-  params.action = action;
-  const qs  = new URLSearchParams(params).toString();
-  const url = getApiUrl();
-  return fetch(`${url}?${qs}`);
+function apiGet(action,params={}){
+  params.action=action;
+  const qs=new URLSearchParams(params).toString();
+  return fetch(`${getApiUrl()}?${qs}`);
 }
-
-// POST text/plain — igual que apiPost del hotel (login)
-function apiPost(data) {
-  const url = getApiUrl();
-  return fetch(url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body:    JSON.stringify(data)
+function apiPost(data){
+  return fetch(getApiUrl(),{
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify(data)
   });
 }
 
-/* ─── PULL: Descargar datos de la nube ──────────────────────── */
-async function doSync() {
-  const url = getApiUrl();
-  if (!url) { showToast('Configura primero la URL del Apps Script','warning'); return; }
-  if (isSyncing) return;
-  isSyncing = true;
-  setSyncUI('syncing');
-  try {
-    const res    = await apiGet('load');
-    const result = await res.json();
-    if (!result.success) throw new Error(result.error || 'Error al cargar');
-
-    if (result.config)   { STATE.config   = result.config;   lsSet('calif_config',   result.config); }
-    if (result.students) { STATE.students = result.students; lsSet('calif_students', result.students); }
-    if (result.weights)  { STATE.weights  = result.weights;  lsSet('calif_weights',  result.weights); }
-    if (result.raw)      { STATE.raw      = result.raw;      lsSet('calif_raw',      result.raw); }
-    if (result.logo !== undefined) {
-      STATE.logo = result.logo;
-      try { if (result.logo) localStorage.setItem('calif_logo', result.logo);
-            else localStorage.removeItem('calif_logo'); } catch(e){}
+async function doSync(){
+  const url=getApiUrl();
+  if(!url){showToast('Configura la URL en ☁️ Sincronizar','warning');return;}
+  if(isSyncing)return;
+  isSyncing=true; setSyncUI('syncing');
+  try{
+    const res=await apiGet('load');
+    const result=await res.json();
+    if(!result.success)throw new Error(result.error||'Error al cargar');
+    if(result.config)  {STATE.config=result.config;   lsSet('calif_config',  result.config);}
+    if(result.students){STATE.students=result.students;lsSet('calif_students',result.students);}
+    if(result.weights) {STATE.weights=result.weights;  lsSet('calif_weights', result.weights);}
+    if(result.raw)     {STATE.raw=result.raw;           lsSet('calif_raw',     result.raw);}
+    if(result.logo!==undefined){
+      STATE.logo=result.logo;
+      try{if(result.logo)localStorage.setItem('calif_logo',result.logo);
+          else localStorage.removeItem('calif_logo');}catch(e){}
     }
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    lsSet('calif_last_sync',now);
     setSyncUI('ok');
-    updateHeader();
-    refreshCurrentTab();
-    showToast('☁️ Datos actualizados correctamente', 'success');
-  } catch(err) {
-    console.error('Sync error:', err);
-    setSyncUI('err');
-    showToast('Error al sincronizar: ' + err.message, 'error');
-  } finally { isSyncing = false; }
+    updateHeader(); refreshCurrentTab();
+    showToast('☁️ Datos actualizados','success');
+  }catch(err){
+    console.error('Sync:',err); setSyncUI('err');
+    showToast('Error al sincronizar: '+err.message,'error');
+  }finally{isSyncing=false;}
 }
 
-/* ─── PUSH: Subir datos a la nube ───────────────────────────── */
-async function doUpload(withLogo=false) {
-  const url = getApiUrl();
-  if (!url) { showToast('Configura primero la URL del Apps Script','warning'); return; }
+async function doUpload(withLogo=false){
+  const url=getApiUrl();
+  if(!url){showToast('Configura la URL primero','warning');return;}
   setSyncUI('syncing');
-  try {
-    const payload = {
-      action:   'save',
-      config:   STATE.config,
-      students: STATE.students,
-      weights:  STATE.weights,
-      raw:      STATE.raw,
-    };
-    if (withLogo) payload.logo = STATE.logo;
-
-    // POST text/plain — igual que el login del hotel
-    const res    = await apiPost(payload);
-    const result = await res.json();
-    if (!result.success) throw new Error(result.error || 'Error al guardar');
-
-    const now = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    lsSet('calif_last_sync', now);
+  try{
+    const payload={action:'save',config:STATE.config,students:STATE.students,
+                   weights:STATE.weights,raw:STATE.raw};
+    if(withLogo)payload.logo=STATE.logo;
+    const res=await apiPost(payload);
+    const result=await res.json();
+    if(!result.success)throw new Error(result.error||'Error al guardar');
+    const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    lsSet('calif_last_sync',now);
     setSyncUI('ok');
-    showToast('☁️ Datos guardados en la nube ✓', 'success');
-  } catch(err) {
-    console.error('Upload error:', err);
-    setSyncUI('err');
-    showToast('Error al subir datos: ' + err.message, 'error');
+    showToast('☁️ Datos guardados en la nube ✓','success');
+  }catch(err){
+    console.error('Upload:',err); setSyncUI('err');
+    showToast('Error al subir: '+err.message,'error');
   }
 }
 
-function setSyncUI(status) {
-  const dot  = document.getElementById('syncDot');
-  const icon = document.getElementById('syncIcon');
-  const txt  = document.getElementById('syncStatusText');
-  const last = lsGet('calif_last_sync', '–');
-  document.getElementById('syncLastTime').textContent = last !== '–' ? 'Última sync: ' + last : '–';
-  dot.className  = 'sync-dot ' + status;
-  if (status === 'ok') {
-    icon.textContent = '✅'; txt.textContent = 'Conectado — Datos sincronizados';
-  } else if (status === 'syncing') {
-    icon.textContent = '⏳'; txt.textContent = 'Sincronizando...';
-  } else if (status === 'err') {
-    icon.textContent = '❌'; txt.textContent = 'Error de conexión';
-  } else {
-    icon.textContent = '⚪'; txt.textContent = 'Sin configurar';
-  }
+function setSyncUI(status){
+  const dot=document.getElementById('syncDot');
+  const icon=document.getElementById('syncIcon');
+  const txt=document.getElementById('syncStatusText');
+  const last=lsGet('calif_last_sync','–');
+  document.getElementById('syncLastTime').textContent=
+    last!=='–'?'Última sync: '+last:'–';
+  dot.className='sync-dot '+status;
+  if(status==='ok')     {icon.textContent='✅';txt.textContent='Conectado — Datos sincronizados';}
+  else if(status==='syncing'){icon.textContent='⏳';txt.textContent='Sincronizando...';}
+  else if(status==='err'){icon.textContent='❌';txt.textContent='Error de conexión';}
+  else                   {icon.textContent='⚪';txt.textContent='Sin configurar';}
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   AUTENTICACIÓN  (igual que el hotel — localStorage + hash)
-═══════════════════════════════════════════════════════════════ */
-function djb2(s) {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) | 0;
+/* ═══════════════════════════════════════════════════
+   CACHÉ
+═══════════════════════════════════════════════════ */
+function clearCache(){
+  if(!confirm('¿Limpiar caché local?\n\nSe borran los datos del navegador. Vuelve a sincronizar después.'))return;
+  const keep=[API_URL_KEY, USERS_KEY];
+  const keys=[];
+  for(let i=0;i<localStorage.length;i++)keys.push(localStorage.key(i));
+  keys.forEach(k=>{ if(!keep.includes(k)) try{localStorage.removeItem(k);}catch(e){} });
+  // Service worker cache
+  if('caches' in window){
+    caches.keys().then(names=>names.forEach(n=>caches.delete(n)));
+  }
+  loadLocal();
+  showToast('🗑️ Caché limpiado — sincroniza para recuperar datos','warning');
+  setTimeout(()=>doSync(),800);
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTENTICACIÓN  (igual que el hotel — hash djb2)
+═══════════════════════════════════════════════════ */
+function djb2(s){
+  let h=5381;
+  for(let i=0;i<s.length;i++)h=(((h<<5)+h)+s.charCodeAt(i))|0;
   return h.toString(16);
 }
-function getUsers() {
-  const def = [
-    { username:'karlamarrufo', hash: djb2('Karla2026'), role:'teacher', display:'Karla Marrufo' },
-    { username:'admin',        hash: djb2('Admin2026'), role:'admin',   display:'Administrador' },
+
+function getUsers(){
+  const def=[
+    {username:'karlamarrufo',hash:djb2('Karla2026'),role:'teacher',display:'Karla Marrufo'},
+    {username:'admin',        hash:djb2('Admin2026'),role:'admin',  display:'Administrador'},
   ];
-  return lsGet(USERS_KEY, def);
+  return lsGet(USERS_KEY,def);
 }
 
-function doLogin() {
-  const user = document.getElementById('loginUser').value.trim().toLowerCase();
-  const pass = document.getElementById('loginPass').value;
-  const err  = document.getElementById('loginErr');
-  const btn  = document.getElementById('loginBtn');
+function doLogin(){
+  const user=document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginErr');
+  const btn=document.getElementById('loginBtn');
   err.classList.remove('show');
-  btn.disabled = true; btn.textContent = 'Verificando...';
-
-  const users = getUsers();
-  const found = users.find(u => u.username === user && u.hash === djb2(pass));
-
-  if (found) {
-    currentUser = { username: found.username, role: found.role,
-                    display: found.display, ts: Date.now() };
-    lsSet(SESSION_KEY, currentUser);
+  btn.disabled=true; btn.textContent='Verificando...';
+  const found=getUsers().find(u=>u.username===user&&u.hash===djb2(pass));
+  if(found){
+    currentUser={username:found.username,role:found.role,display:found.display,ts:Date.now()};
+    lsSet(SESSION_KEY,currentUser);
     document.getElementById('loginScreen').classList.add('hidden');
     onAppStart();
-  } else {
-    err.textContent = 'Usuario o contraseña incorrectos';
+  }else{
+    err.textContent='Usuario o contraseña incorrectos';
     err.classList.add('show');
   }
-  btn.disabled = false; btn.textContent = 'Entrar';
+  btn.disabled=false; btn.textContent='Entrar';
 }
 
-function doLogout() {
-  lsDel(SESSION_KEY);
-  currentUser = null;
-  if (syncIntervalId) clearInterval(syncIntervalId);
+function doLogout(){
+  lsDel(SESSION_KEY); currentUser=null;
+  if(syncIntervalId)clearInterval(syncIntervalId);
   document.getElementById('loginScreen').classList.remove('hidden');
+  // Reset login fields
+  document.getElementById('loginUser').value='';
+  document.getElementById('loginPass').value='';
+  document.getElementById('loginErr').classList.remove('show');
 }
 
-function checkSession() {
-  const s = lsGet(SESSION_KEY, null);
-  // Session expires after 12 hours
-  if (s && (Date.now() - s.ts) < 12 * 3600000) {
-    currentUser = s;
-    return true;
-  }
-  lsDel(SESSION_KEY);
-  return false;
+function checkSession(){
+  const s=lsGet(SESSION_KEY,null);
+  if(s&&(Date.now()-s.ts)<12*3600000){currentUser=s;return true;}
+  lsDel(SESSION_KEY); return false;
 }
 
-function resetCredentials() {
-  if (!confirm('Esto restablecerá los usuarios a los valores por defecto.\n\nUsuario: karlamarrufo\nContraseña: Karla2026\n\n¿Continuar?')) return;
+function resetCredentials(){
+  if(!confirm('Esto restablecerá los usuarios a los valores por defecto.\n\nUsuario: karlamarrufo\nContraseña: Karla2026\n\n¿Continuar?'))return;
   localStorage.removeItem(USERS_KEY);
-  // Also clear any old system session keys
-  ['session','sys_users','calif_session','audit_session'].forEach(k => {
-    try { localStorage.removeItem(k); } catch(e){}
+  ['session','sys_users','calif_session','audit_session'].forEach(k=>{
+    try{localStorage.removeItem(k);}catch(e){}
   });
-  showToast('✅ Credenciales restablecidas — usuario: karlamarrufo / Karla2026','success');
+  showToast('✅ Credenciales restablecidas — usa karlamarrufo / Karla2026','success');
 }
 
-function changePassword() {
-  const old  = document.getElementById('pwdOld').value;
-  const nw   = document.getElementById('pwdNew').value;
-  const conf = document.getElementById('pwdConf').value;
-  if (!old || !nw) { showToast('Completa todos los campos','warning'); return; }
-  if (nw !== conf) { showToast('Las contraseñas no coinciden','error'); return; }
-  const users = getUsers();
-  const idx   = users.findIndex(u => u.username === currentUser.username);
-  if (idx < 0 || users[idx].hash !== djb2(old)) {
-    showToast('Contraseña actual incorrecta','error'); return;
-  }
-  users[idx].hash = djb2(nw);
-  lsSet(USERS_KEY, users);
-  document.getElementById('pwdOld').value = '';
-  document.getElementById('pwdNew').value = '';
-  document.getElementById('pwdConf').value = '';
+function changePassword(){
+  const old=document.getElementById('pwdOld').value;
+  const nw=document.getElementById('pwdNew').value;
+  const conf=document.getElementById('pwdConf').value;
+  if(!old||!nw){showToast('Completa todos los campos','warning');return;}
+  if(nw!==conf){showToast('Las contraseñas no coinciden','error');return;}
+  const users=getUsers();
+  const idx=users.findIndex(u=>u.username===currentUser.username);
+  if(idx<0||users[idx].hash!==djb2(old)){showToast('Contraseña actual incorrecta','error');return;}
+  users[idx].hash=djb2(nw);
+  lsSet(USERS_KEY,users);
+  document.getElementById('pwdOld').value='';
+  document.getElementById('pwdNew').value='';
+  document.getElementById('pwdConf').value='';
   showToast('✅ Contraseña actualizada','success');
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
+   GESTIÓN DE USUARIOS
+═══════════════════════════════════════════════════ */
+function renderUsers(){
+  const users=getUsers();
+  const tbody=document.getElementById('usersTbody');
+  tbody.innerHTML=users.map(u=>`
+    <tr>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>${esc(u.display)}</td>
+      <td><span class="user-badge ${u.role==='admin'?'admin':'teacher'}">
+        ${u.role==='admin'?'🛡️ Admin':'👩‍🏫 Docente'}
+      </span></td>
+      <td>
+        <button class="edit-btn" onclick="openEditUser('${esc(u.username)}')">✏️</button>
+        <button class="del-btn"  onclick="deleteUser('${esc(u.username)}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+function addUser(){
+  const username=document.getElementById('newUsername').value.trim().toLowerCase().replace(/\s/g,'');
+  const display =document.getElementById('newUserDisplay').value.trim();
+  const pass    =document.getElementById('newUserPass').value;
+  const role    =document.getElementById('newUserRole').value;
+  if(!username||!display||!pass){showToast('Completa todos los campos','warning');return;}
+  const users=getUsers();
+  if(users.find(u=>u.username===username)){showToast('Ese usuario ya existe','error');return;}
+  users.push({username,hash:djb2(pass),role,display});
+  lsSet(USERS_KEY,users);
+  document.getElementById('newUsername').value='';
+  document.getElementById('newUserDisplay').value='';
+  document.getElementById('newUserPass').value='';
+  renderUsers();
+  showToast('✅ Usuario agregado','success');
+}
+
+function deleteUser(username){
+  if(username===currentUser.username){showToast('No puedes eliminarte a ti mismo','error');return;}
+  if(!confirm('¿Eliminar usuario "'+username+'"?'))return;
+  const users=getUsers().filter(u=>u.username!==username);
+  lsSet(USERS_KEY,users);
+  renderUsers();
+  showToast('Usuario eliminado','warning');
+}
+
+function openEditUser(username){
+  const u=getUsers().find(x=>x.username===username);
+  if(!u)return;
+  document.getElementById('editUsername').value=u.username;
+  document.getElementById('editUserDisplay').value=u.display;
+  document.getElementById('editUserRole').value=u.role;
+  document.getElementById('editUserPass').value='';
+  document.getElementById('editUserModal').classList.add('show');
+}
+function closeEditUser(){document.getElementById('editUserModal').classList.remove('show');}
+function saveEditUser(){
+  const username=document.getElementById('editUsername').value;
+  const display =document.getElementById('editUserDisplay').value.trim();
+  const role    =document.getElementById('editUserRole').value;
+  const pass    =document.getElementById('editUserPass').value;
+  const users=getUsers();
+  const idx=users.findIndex(u=>u.username===username);
+  if(idx<0)return;
+  users[idx].display=display;
+  users[idx].role=role;
+  if(pass)users[idx].hash=djb2(pass);
+  lsSet(USERS_KEY,users);
+  closeEditUser();
+  renderUsers();
+  showToast('✅ Usuario actualizado','success');
+}
+
+/* ═══════════════════════════════════════════════════
    APP INIT
-═══════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+═══════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
   loadLocal();
-  if (checkSession()) {
+  if(checkSession()){
     document.getElementById('loginScreen').classList.add('hidden');
     onAppStart();
-  } else {
-    updateLoginScreen();
+  }else{
+    updateLoginLogo();
   }
 });
 
-function saveApiUrlFromLogin() {
-  const field = document.getElementById('loginUrlField');
-  if (!field) { alert('Error: campo no encontrado'); return; }
-  const url = field.value.trim();
-  if (!url) { showToast('Pega la URL del Apps Script primero','warning'); return; }
-  try {
-    localStorage.setItem(API_URL_KEY, url);
-    // Also save in sync tab input if it exists
-    const syncInput = document.getElementById('apiUrlInput');
-    if (syncInput) syncInput.value = url;
-    updateLoginScreen();
-    showToast('✅ URL guardada — ahora ingresa tu usuario y contraseña','success');
-  } catch(e) {
-    alert('Error al guardar: ' + e.message);
+function updateLoginLogo(){
+  if(STATE.logo){
+    const wrap=document.getElementById('loginLogoWrap');
+    wrap.innerHTML=`<img src="${STATE.logo}" alt="logo">`;
   }
+  document.getElementById('loginTitle').textContent=
+    STATE.config.schoolName||'Sistema de Calificaciones';
 }
 
-function updateLoginScreen() {
-  const url = getApiUrl();
-  const urlText = document.getElementById('loginUrlText');
-  const urlForm = document.getElementById('loginUrlForm');
-  const infoBox = document.getElementById('loginUrlInfo');
-  if (url) {
-    if (urlText) urlText.textContent = '🔗 ' + url.slice(0,55) + '…';
-    if (urlForm) urlForm.style.display = 'none';
-    if (infoBox) infoBox.className = 'login-url';
-  } else {
-    if (urlText) urlText.textContent = '⚠️ Sin conexión — ingresa la URL del Apps Script:';
-    if (urlForm) urlForm.style.display = 'flex';
-    if (infoBox) infoBox.className = 'login-url no-url';
-    // Pre-fill if there's something in the input
-    const field = document.getElementById('loginUrlField');
-    if (field && !field.value) field.value = '';
-  }
-  if (STATE.logo) {
-    document.getElementById('loginLogo').src = STATE.logo;
-    document.getElementById('loginLogo').style.display = 'block';
-    document.getElementById('loginLogoPlaceholder').style.display = 'none';
-    document.getElementById('loginTitle').textContent =
-      STATE.config.schoolName || 'Sistema de Calificaciones';
-    document.getElementById('loginSubtitle').textContent =
-      [STATE.config.grade, STATE.config.group, STATE.config.year].filter(Boolean).join(' · ') || 'Inicia sesión para continuar';
-  }
-}
-
-function onAppStart() {
+function onAppStart(){
   updateHeader();
-  buildSubjectTabs();
-  buildBimTabs();
-  renderWeightRow();
-  renderStudents();
-  renderGradesTable();
-  renderReport();
-  updateConfigForm();
-  updateSyncTab();
-  setSyncUI(getApiUrl() ? 'ok' : 'idle');
-
-  // Auto-sync al iniciar (igual que el hotel)
-  if (getApiUrl()) {
+  buildSubjectTabs(); buildBimTabs();
+  renderWeightRow(); renderStudents();
+  renderGradesTable(); renderReport(); renderUsers();
+  updateConfigForm(); updateSyncTab();
+  setSyncUI(getApiUrl()?'ok':'idle');
+  if(getApiUrl()){
     doSync();
-    if (syncIntervalId) clearInterval(syncIntervalId);
-    syncIntervalId = setInterval(() => doSync(), 60000); // cada minuto
+    if(syncIntervalId)clearInterval(syncIntervalId);
+    syncIntervalId=setInterval(()=>doSync(),60000);
   }
 }
 
-function updateHeader() {
-  const cfg = STATE.config;
-  document.getElementById('hdrTitle').textContent =
-    cfg.schoolName || 'Sistema de Calificaciones';
-  document.getElementById('hdrSub').textContent =
-    [cfg.grade && cfg.grade + (cfg.group ? ' ' + cfg.group : ''), cfg.year]
-      .filter(Boolean).join(' · ') || '–';
-  if (STATE.logo) {
-    const box = document.getElementById('hdrLogoBox');
-    box.innerHTML = `<img src="${STATE.logo}" class="hdr-logo">`;
+function updateHeader(){
+  const cfg=STATE.config;
+  document.getElementById('hdrTitle').textContent=cfg.schoolName||'Sistema de Calificaciones';
+  document.getElementById('hdrSub').textContent=
+    [cfg.grade&&cfg.grade+(cfg.group?' '+cfg.group:''),cfg.year].filter(Boolean).join(' · ')||'–';
+  if(STATE.logo){
+    document.getElementById('hdrLogoBox').innerHTML=
+      `<img src="${STATE.logo}" class="hdr-logo">`;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TAB NAVIGATION
-═══════════════════════════════════════════════════════════════ */
-function goTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+/* ═══════════════════════════════════════════════════
+   NAVEGACIÓN
+═══════════════════════════════════════════════════ */
+function goTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   document.getElementById('nav-'+id).classList.add('active');
-  if (id === 'grades')  renderGradesTable();
-  if (id === 'reports') renderReport();
-  if (id === 'sync')    updateSyncTab();
+  if(id==='grades')  renderGradesTable();
+  if(id==='reports') renderReport();
+  if(id==='sync')    updateSyncTab();
+  if(id==='usuarios')renderUsers();
+}
+function refreshCurrentTab(){
+  const a=document.querySelector('.nav-btn.active');
+  if(a)goTab(a.id.replace('nav-',''));
+  updateHeader(); updateConfigForm(); updateLoginLogo();
 }
 
-function refreshCurrentTab() {
-  const active = document.querySelector('.nav-btn.active');
-  if (active) {
-    const id = active.id.replace('nav-','');
-    goTab(id);
-  }
-  updateHeader();
-  updateConfigForm();
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CONFIG TAB
-═══════════════════════════════════════════════════════════════ */
-function updateConfigForm() {
-  const c = STATE.config;
-  document.getElementById('cfgSchool').value = c.schoolName || '';
-  document.getElementById('cfgYear').value   = c.year || '';
-  document.getElementById('cfgGrade').value  = c.grade || '';
-  document.getElementById('cfgGroup').value  = c.group || '';
-  document.getElementById('cfgBim').value    = String(c.bimestres || 5);
-  if (STATE.logo) {
-    document.getElementById('logoPreview').src = STATE.logo;
-    document.getElementById('logoPreview').style.display = 'block';
-    document.getElementById('logoPlaceholder').style.display = 'none';
-  } else {
-    document.getElementById('logoPreview').style.display = 'none';
-    document.getElementById('logoPlaceholder').style.display = 'flex';
+/* ═══════════════════════════════════════════════════
+   CONFIGURACIÓN
+═══════════════════════════════════════════════════ */
+function updateConfigForm(){
+  const c=STATE.config;
+  document.getElementById('cfgSchool').value=c.schoolName||'';
+  document.getElementById('cfgYear').value  =c.year||'';
+  document.getElementById('cfgGrade').value =c.grade||'';
+  document.getElementById('cfgGroup').value =c.group||'';
+  document.getElementById('cfgBim').value   =String(c.bimestres||5);
+  if(STATE.logo){
+    document.getElementById('logoPreview').src=STATE.logo;
+    document.getElementById('logoPreview').style.display='block';
+    document.getElementById('logoPlaceholder').style.display='none';
+  }else{
+    document.getElementById('logoPreview').style.display='none';
+    document.getElementById('logoPlaceholder').style.display='flex';
   }
 }
-
-function saveConfig() {
-  STATE.config = {
-    schoolName: document.getElementById('cfgSchool').value.trim(),
-    year:       document.getElementById('cfgYear').value.trim(),
-    grade:      document.getElementById('cfgGrade').value.trim(),
-    group:      document.getElementById('cfgGroup').value.trim(),
-    bimestres:  parseInt(document.getElementById('cfgBim').value) || 5,
+function saveConfig(){
+  STATE.config={
+    schoolName:document.getElementById('cfgSchool').value.trim(),
+    year:      document.getElementById('cfgYear').value.trim(),
+    grade:     document.getElementById('cfgGrade').value.trim(),
+    group:     document.getElementById('cfgGroup').value.trim(),
+    bimestres: parseInt(document.getElementById('cfgBim').value)||5,
   };
-  saveLocal();
-  updateHeader();
-  buildBimTabs();
+  saveLocal(); updateHeader(); buildBimTabs(); updateLoginLogo();
   showToast('✅ Configuración guardada','success');
 }
-
-function loadLogo(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { showToast('Imagen muy grande (máx 2MB)','error'); return; }
-  const reader = new FileReader();
-  reader.onload = e => {
-    STATE.logo = e.target.result;
-    saveLocal();
-    updateConfigForm();
-    updateHeader();
+function loadLogo(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){showToast('Imagen muy grande (máx 2MB)','error');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    STATE.logo=e.target.result; saveLocal();
+    updateConfigForm(); updateHeader(); updateLoginLogo();
     showToast('✅ Logo guardado','success');
   };
   reader.readAsDataURL(file);
 }
-
-function clearLogo() {
-  STATE.logo = null;
-  saveLocal();
-  updateConfigForm();
-  updateHeader();
+function clearLogo(){
+  STATE.logo=null; saveLocal();
+  updateConfigForm(); updateHeader(); updateLoginLogo();
   showToast('Logo eliminado','warning');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   STUDENTS TAB
-═══════════════════════════════════════════════════════════════ */
-function renderStudents() {
-  const tbody = document.getElementById('studentsTbody');
-  document.getElementById('studentCount').textContent = ` (${STATE.students.length})`;
-  if (!STATE.students.length) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">Sin alumnos registrados</td></tr>`;
+/* ═══════════════════════════════════════════════════
+   ALUMNOS
+═══════════════════════════════════════════════════ */
+function renderStudents(){
+  const tbody=document.getElementById('studentsTbody');
+  document.getElementById('studentCount').textContent=` (${STATE.students.length})`;
+  if(!STATE.students.length){
+    tbody.innerHTML=`<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">Sin alumnos registrados</td></tr>`;
     return;
   }
-  tbody.innerHTML = STATE.students.map((s,i) => `
-    <tr class="student-row">
+  tbody.innerHTML=STATE.students.map((s,i)=>`
+    <tr>
       <td style="color:var(--text3);">${i+1}</td>
       <td>
         <span id="sname_${s.id}">${esc(s.name)}</span>
@@ -949,407 +994,288 @@ function renderStudents() {
       </td>
       <td>
         <button class="edit-btn" onclick="toggleEditStudent('${s.id}')">✏️</button>
-        <button class="del-btn" onclick="deleteStudent('${s.id}')">🗑️</button>
+        <button class="del-btn"  onclick="deleteStudent('${s.id}')">🗑️</button>
       </td>
     </tr>`).join('');
 }
-
-function addStudent() {
-  const inp  = document.getElementById('newStudentName');
-  const name = inp.value.trim();
-  if (!name) return;
-  STATE.students.push({ id: uid(), name });
-  saveLocal();
-  inp.value = '';
-  renderStudents();
+function addStudent(){
+  const inp=document.getElementById('newStudentName');
+  const name=inp.value.trim();
+  if(!name)return;
+  STATE.students.push({id:uid(),name});
+  saveLocal(); inp.value=''; renderStudents();
   showToast('✅ Alumno agregado');
 }
-
-function toggleEditStudent(id) {
-  const span = document.getElementById('sname_'+id);
-  const inp  = document.getElementById('sedit_'+id);
-  if (inp.style.display === 'none') {
-    span.style.display = 'none'; inp.style.display = ''; inp.focus();
-  } else { saveStudentName(id); }
+function toggleEditStudent(id){
+  const span=document.getElementById('sname_'+id);
+  const inp =document.getElementById('sedit_'+id);
+  if(inp.style.display==='none'){span.style.display='none';inp.style.display='';inp.focus();}
+  else saveStudentName(id);
+}
+function saveStudentName(id){
+  const inp=document.getElementById('sedit_'+id);
+  const name=inp.value.trim();
+  if(!name)return;
+  const s=STATE.students.find(x=>x.id===id);
+  if(s){s.name=name;saveLocal();renderStudents();showToast('✅ Nombre actualizado');}
+}
+function deleteStudent(id){
+  if(!confirm('¿Eliminar este alumno? Se borrarán sus calificaciones.'))return;
+  STATE.students=STATE.students.filter(s=>s.id!==id);
+  Object.keys(STATE.raw).forEach(k=>{if(k.startsWith(id+'_'))delete STATE.raw[k];});
+  saveLocal(); renderStudents(); showToast('Alumno eliminado','warning');
 }
 
-function saveStudentName(id) {
-  const inp  = document.getElementById('sedit_'+id);
-  const name = inp.value.trim();
-  if (!name) return;
-  const s = STATE.students.find(x => x.id === id);
-  if (s) { s.name = name; saveLocal(); renderStudents(); showToast('✅ Nombre actualizado'); }
+/* ═══════════════════════════════════════════════════
+   CALIFICACIONES — TABS
+═══════════════════════════════════════════════════ */
+function buildSubjectTabs(){
+  document.getElementById('subjectTabs').innerHTML=SUBJECTS.map(s=>
+    `<button class="subject-tab${s===curSubject?' active':''}"
+             onclick="selectSubject('${s}')">${s}</button>`).join('');
 }
-
-function deleteStudent(id) {
-  if (!confirm('¿Eliminar este alumno? Se borrarán sus calificaciones.')) return;
-  STATE.students = STATE.students.filter(s => s.id !== id);
-  // clean grades
-  Object.keys(STATE.raw).forEach(k => { if (k.startsWith(id+'_')) delete STATE.raw[k]; });
-  saveLocal();
-  renderStudents();
-  showToast('Alumno eliminado','warning');
+function buildBimTabs(){
+  const n=STATE.config.bimestres||5;
+  document.getElementById('bimTabs').innerHTML=
+    Array.from({length:n},(_,i)=>i+1).map(b=>
+      `<button class="bim-tab${b===curBim?' active':''}"
+               onclick="selectBim(${b})">Bim ${b}</button>`).join('');
+  if(curBim>n)curBim=1;
 }
+function selectSubject(s){curSubject=s;buildSubjectTabs();renderWeightRow();renderGradesTable();}
+function selectBim(b){curBim=b;buildBimTabs();renderWeightRow();renderGradesTable();}
 
-/* ═══════════════════════════════════════════════════════════════
-   GRADES TAB — TABS
-═══════════════════════════════════════════════════════════════ */
-function buildSubjectTabs() {
-  const el = document.getElementById('subjectTabs');
-  el.innerHTML = SUBJECTS.map(s => `
-    <button class="subject-tab${s===curSubject?' active':''}"
-            onclick="selectSubject('${s}')">${s}</button>`).join('');
-}
-
-function buildBimTabs() {
-  const n  = STATE.config.bimestres || 5;
-  const el = document.getElementById('bimTabs');
-  el.innerHTML = Array.from({length:n},(_,i)=>i+1).map(b => `
-    <button class="bim-tab${b===curBim?' active':''}"
-            onclick="selectBim(${b})">Bim ${b}</button>`).join('');
-  if (curBim > n) { curBim = 1; }
-}
-
-function selectSubject(s) {
-  curSubject = s;
-  buildSubjectTabs();
-  renderWeightRow();
-  renderGradesTable();
-}
-
-function selectBim(b) {
-  curBim = b;
-  buildBimTabs();
-  renderWeightRow();
-  renderGradesTable();
-}
-
-/* ─── Pesos ───────────────────────────────────────────────── */
-function wKey() { return `${curSubject}_${curBim}`; }
-function getWeights() { return Object.assign({}, DEF_W, STATE.weights[wKey()]); }
-
-function renderWeightRow() {
-  const w   = getWeights();
-  const sum = CRITERIA.reduce((a,c) => a + (parseFloat(w[c])||0), 0);
-  document.getElementById('weightsLabel').textContent =
-    ` — ${curSubject} · Bimestre ${curBim}`;
-  document.getElementById('weightRow').innerHTML = CRITERIA.map(c => `
+/* ── Pesos ─────────────────────────────────── */
+function wKey(){return `${curSubject}_${curBim}`;}
+function getWeights(){return Object.assign({},DEF_W,STATE.weights[wKey()]);}
+function renderWeightRow(){
+  const w=getWeights();
+  const sum=CRITERIA.reduce((a,c)=>a+(parseFloat(w[c])||0),0);
+  document.getElementById('weightsLabel').textContent=` — ${curSubject} · Bimestre ${curBim}`;
+  document.getElementById('weightRow').innerHTML=CRITERIA.map(c=>`
     <div class="weight-item">
       <label>${CRIT_LABELS[c]}</label>
-      <input type="number" id="w_${c}" value="${w[c]}" min="0" max="100"
-             onchange="onWeightChange()">
-    </div>`).join('') + `
-    <div class="weight-total ${Math.abs(sum-100)<0.1?'ok':'bad'}" id="wTotal">
-      Total: ${sum}%
-    </div>`;
+      <input type="number" id="w_${c}" value="${w[c]}" min="0" max="100" onchange="onWeightChange()">
+    </div>`).join('')+
+    `<div class="weight-total ${Math.abs(sum-100)<.1?'ok':'bad'}" id="wTotal">Total: ${sum}%</div>`;
+}
+function onWeightChange(){
+  const w={};
+  CRITERIA.forEach(c=>w[c]=parseFloat(document.getElementById('w_'+c).value)||0);
+  const sum=CRITERIA.reduce((a,c)=>a+w[c],0);
+  document.getElementById('wTotal').textContent='Total: '+sum+'%';
+  document.getElementById('wTotal').className='weight-total '+(Math.abs(sum-100)<.1?'ok':'bad');
+  STATE.weights[wKey()]=w; saveLocal();
 }
 
-function onWeightChange() {
-  const w = {};
-  CRITERIA.forEach(c => w[c] = parseFloat(document.getElementById('w_'+c).value)||0);
-  const sum = CRITERIA.reduce((a,c) => a + w[c], 0);
-  const el  = document.getElementById('wTotal');
-  el.textContent  = 'Total: ' + sum + '%';
-  el.className    = 'weight-total ' + (Math.abs(sum-100)<0.1?'ok':'bad');
-  STATE.weights[wKey()] = w;
-  saveLocal();
-}
-
-/* ─── Tabla de captura ─────────────────────────────────────── */
-function renderGradesTable() {
-  const label = `✏️ ${curSubject} — Bimestre ${curBim}`;
-  document.getElementById('gradesLabel').textContent = label;
-
-  const head = document.getElementById('gradesHead');
-  const body = document.getElementById('gradesTbody');
-
-  if (!STATE.students.length) {
-    head.innerHTML = '';
-    body.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Agrega alumnos primero</td></tr>`;
+/* ── Tabla de captura ──────────────────────── */
+function renderGradesTable(){
+  document.getElementById('gradesLabel').textContent=`✏️ ${curSubject} — Bimestre ${curBim}`;
+  const head=document.getElementById('gradesHead');
+  const body=document.getElementById('gradesTbody');
+  if(!STATE.students.length){
+    head.innerHTML='';
+    body.innerHTML=`<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px;">Agrega alumnos primero</td></tr>`;
     return;
   }
-
-  head.innerHTML = `<tr>
+  head.innerHTML=`<tr>
     <th>#</th><th>Alumno</th>
     <th title="Tareas entregadas">T.Ent</th><th title="Tareas totales">T.Tot</th>
     <th title="Trabajos entregados">W.Ent</th><th title="Trabajos totales">W.Tot</th>
-    <th title="Disciplina (puntos sobre el peso)">Disc</th>
-    <th title="Examen aciertos">E.Ent</th><th title="Examen total reactivos">E.Tot</th>
-    <th>Calif</th>
-  </tr>`;
-
-  const w = getWeights();
-  body.innerHTML = STATE.students.map((s,i) => {
-    const k = `${s.id}_${curSubject}_${curBim}`;
-    const r = STATE.raw[k] || {};
-    const grade = calcGrade(s.id, curSubject, curBim);
-    const { lbl, cls } = gradeLabel(grade);
+    <th title="Disciplina">Disc</th>
+    <th title="Examen aciertos">E.Ent</th><th title="Examen total">E.Tot</th>
+    <th>Calif</th></tr>`;
+  const w=getWeights();
+  body.innerHTML=STATE.students.map((s,i)=>{
+    const k=`${s.id}_${curSubject}_${curBim}`;
+    const r=STATE.raw[k]||{};
+    const grade=calcGrade(s.id,curSubject,curBim);
+    const{lbl,cls}=gradeLabel(grade);
     return `<tr data-sid="${s.id}">
       <td style="color:var(--text3);">${i+1}</td>
       <td style="font-weight:500;">${esc(s.name)}</td>
-      <td><input type="number" min="0" class="raw-in" data-f="t_ent" data-sid="${s.id}"
-          value="${r.t_ent||''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="t_tot" data-sid="${s.id}"
-          value="${r.t_tot||''}" placeholder="–"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="w_ent" data-sid="${s.id}"
-          value="${r.w_ent||''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="w_tot" data-sid="${s.id}"
-          value="${r.w_tot||''}" placeholder="–"></td>
-      <td><input type="number" min="0" max="${w.disciplina}" class="raw-in"
-          data-f="disc" data-sid="${s.id}"
-          value="${r.disc||''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="e_ent" data-sid="${s.id}"
-          value="${r.e_ent||''}" placeholder="0"></td>
-      <td><input type="number" min="0" class="raw-in" data-f="e_tot" data-sid="${s.id}"
-          value="${r.e_tot||''}" placeholder="–"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="t_ent" data-sid="${s.id}" value="${r.t_ent!==undefined?r.t_ent:''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="t_tot" data-sid="${s.id}" value="${r.t_tot!==undefined?r.t_tot:''}" placeholder="–"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="w_ent" data-sid="${s.id}" value="${r.w_ent!==undefined?r.w_ent:''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="w_tot" data-sid="${s.id}" value="${r.w_tot!==undefined?r.w_tot:''}" placeholder="–"></td>
+      <td><input type="number" min="0" max="${w.disciplina}" class="raw-in" data-f="disc" data-sid="${s.id}" value="${r.disc!==undefined?r.disc:''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="e_ent" data-sid="${s.id}" value="${r.e_ent!==undefined?r.e_ent:''}" placeholder="0"></td>
+      <td><input type="number" min="0" class="raw-in" data-f="e_tot" data-sid="${s.id}" value="${r.e_tot!==undefined?r.e_tot:''}" placeholder="–"></td>
       <td class="grade-cell">
-        <span class="grade-val ${cls}">${grade > 0 ? (grade/10).toFixed(1) : '–'}</span>
-        <span style="font-size:.72rem;color:var(--text3);margin-left:3px;">${lbl}</span>
-      </td>
-    </tr>`;
+        <span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
+        <span style="font-size:.72rem;color:var(--text3);margin-left:2px;">${lbl}</span>
+      </td></tr>`;
   }).join('');
-
-  // Update grade on input change
-  document.querySelectorAll('.raw-in').forEach(inp => {
-    inp.addEventListener('input', () => updateRowGrade(inp.dataset.sid));
+  document.querySelectorAll('.raw-in').forEach(inp=>{
+    inp.addEventListener('input',()=>updateRowGrade(inp.dataset.sid));
   });
 }
-
-function updateRowGrade(sid) {
+function updateRowGrade(sid){
   collectRowRaw(sid);
-  const grade = calcGrade(sid, curSubject, curBim);
-  const { lbl, cls } = gradeLabel(grade);
-  const row = document.querySelector(`tr[data-sid="${sid}"]`);
-  if (row) {
-    const cell = row.querySelector('.grade-cell');
-    cell.innerHTML = `<span class="grade-val ${cls}">${grade > 0 ? (grade/10).toFixed(1) : '–'}</span>
-      <span style="font-size:.72rem;color:var(--text3);margin-left:3px;">${lbl}</span>`;
+  const grade=calcGrade(sid,curSubject,curBim);
+  const{lbl,cls}=gradeLabel(grade);
+  const row=document.querySelector(`tr[data-sid="${sid}"]`);
+  if(row){
+    row.querySelector('.grade-cell').innerHTML=
+      `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
+       <span style="font-size:.72rem;color:var(--text3);margin-left:2px;">${lbl}</span>`;
   }
 }
-
-function collectRowRaw(sid) {
-  const k = `${sid}_${curSubject}_${curBim}`;
-  const r = STATE.raw[k] || {};
-  document.querySelectorAll(`.raw-in[data-sid="${sid}"]`).forEach(inp => {
-    const v = parseFloat(inp.value);
-    r[inp.dataset.f] = isNaN(v) ? undefined : v;
+function collectRowRaw(sid){
+  const k=`${sid}_${curSubject}_${curBim}`;
+  const r=STATE.raw[k]||{};
+  document.querySelectorAll(`.raw-in[data-sid="${sid}"]`).forEach(inp=>{
+    const v=parseFloat(inp.value);
+    r[inp.dataset.f]=isNaN(v)?undefined:v;
   });
-  STATE.raw[k] = r;
+  STATE.raw[k]=r;
 }
-
-function saveGrades() {
-  STATE.students.forEach(s => collectRowRaw(s.id));
-  saveLocal();
-  renderGradesTable();
+function saveGrades(){
+  STATE.students.forEach(s=>collectRowRaw(s.id));
+  saveLocal(); renderGradesTable();
   showToast('✅ Calificaciones guardadas');
-  // auto-upload in background
-  if (getApiUrl()) doUpload(false);
+  if(getApiUrl())doUpload(false);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CÁLCULO DE CALIFICACIONES
-═══════════════════════════════════════════════════════════════ */
-function calcGrade(sid, subject, bim) {
-  const key = `${sid}_${subject}_${bim}`;
-  const r   = STATE.raw[key];
-  if (!r) return 0;
-  const w   = Object.assign({}, DEF_W, STATE.weights[`${subject}_${bim}`]);
-  let score = 0;
-
-  // Tareas: entregadas / totales × peso
-  if (r.t_tot > 0 && r.t_ent >= 0) score += (r.t_ent / r.t_tot) * w.tareas;
-  // Trabajos: realizados / totales × peso
-  if (r.w_tot > 0 && r.w_ent >= 0) score += (r.w_ent / r.w_tot) * w.trabajos;
-  // Disciplina: puntaje directo (sobre el peso)
-  if (r.disc >= 0) score += (r.disc || 0);
-  // Examen: aciertos / total × peso
-  if (r.e_tot > 0 && r.e_ent >= 0) score += (r.e_ent / r.e_tot) * w.examen;
-
-  return Math.min(100, Math.max(0, Math.round(score * 10) / 10));
+/* ═══════════════════════════════════════════════════
+   CÁLCULO
+═══════════════════════════════════════════════════ */
+function calcGrade(sid,subject,bim){
+  const key=`${sid}_${subject}_${bim}`;
+  const r=STATE.raw[key];
+  if(!r)return 0;
+  const w=Object.assign({},DEF_W,STATE.weights[`${subject}_${bim}`]);
+  let score=0;
+  if(r.t_tot>0&&r.t_ent>=0) score+=(r.t_ent/r.t_tot)*w.tareas;
+  if(r.w_tot>0&&r.w_ent>=0) score+=(r.w_ent/r.w_tot)*w.trabajos;
+  if(r.disc>=0)              score+=(r.disc||0);
+  if(r.e_tot>0&&r.e_ent>=0) score+=(r.e_ent/r.e_tot)*w.examen;
+  return Math.min(100,Math.max(0,Math.round(score*10)/10));
+}
+function gradeLabel(score){
+  const g=score/10;
+  if(g>=9) return{lbl:'MB',cls:'MB'};
+  if(g>=7) return{lbl:'B', cls:'B'};
+  if(g>=6) return{lbl:'S', cls:'S'};
+  if(g>0)  return{lbl:'NS',cls:'NS'};
+  return{lbl:'',cls:''};
 }
 
-function gradeLabel(score) {
-  // score is 0-100, convert to 0-10
-  const g = score / 10;
-  if (g >= 9)   return { lbl:'MB', cls:'MB' };
-  if (g >= 7)   return { lbl:'B',  cls:'B'  };
-  if (g >= 6)   return { lbl:'S',  cls:'S'  };
-  if (g > 0)    return { lbl:'NS', cls:'NS' };
-  return { lbl:'', cls:'' };
-}
-
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    REPORTES
-═══════════════════════════════════════════════════════════════ */
-function updateReportFilters() {
-  const n = STATE.config.bimestres || 5;
-  const rSub = document.getElementById('rptSubject');
-  const rBim = document.getElementById('rptBim');
-  rSub.innerHTML = '<option value="">Todas las materias</option>' +
+═══════════════════════════════════════════════════ */
+function updateReportFilters(){
+  const n=STATE.config.bimestres||5;
+  document.getElementById('rptSubject').innerHTML=
+    '<option value="">Todas las materias</option>'+
     SUBJECTS.map(s=>`<option value="${s}">${s}</option>`).join('');
-  rBim.innerHTML = '<option value="">Todos los bimestres</option>' +
+  document.getElementById('rptBim').innerHTML=
+    '<option value="">Todos los bimestres</option>'+
     Array.from({length:n},(_,i)=>i+1)
       .map(b=>`<option value="${b}">Bimestre ${b}</option>`).join('');
 }
-
-function renderReport() {
+function renderReport(){
   updateReportFilters();
-  const selSub = document.getElementById('rptSubject').value;
-  const selBim = document.getElementById('rptBim').value;
-  const subjects = selSub ? [selSub] : SUBJECTS;
-  const n = STATE.config.bimestres || 5;
-  const bims = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
-
-  if (!STATE.students.length) {
-    document.getElementById('rptHead').innerHTML = '';
-    document.getElementById('rptBody').innerHTML =
+  const selSub=document.getElementById('rptSubject').value;
+  const selBim=document.getElementById('rptBim').value;
+  const subjects=selSub?[selSub]:SUBJECTS;
+  const n=STATE.config.bimestres||5;
+  const bims=selBim?[parseInt(selBim)]:Array.from({length:n},(_,i)=>i+1);
+  if(!STATE.students.length){
+    document.getElementById('rptHead').innerHTML='';
+    document.getElementById('rptBody').innerHTML=
       `<tr><td style="padding:20px;color:var(--text3);">Sin alumnos</td></tr>`;
-    document.getElementById('rptSummary').innerHTML = '';
+    document.getElementById('rptSummary').innerHTML='';
     return;
   }
-
-  // Build header
-  const cols = [];
-  subjects.forEach(s => bims.forEach(b => cols.push({s,b,label:`${s} B${b}`})));
-
-  document.getElementById('rptHead').innerHTML = `<tr>
+  const cols=[];
+  subjects.forEach(s=>bims.forEach(b=>cols.push({s,b,label:`${s} B${b}`})));
+  document.getElementById('rptHead').innerHTML=`<tr>
     <th>#</th><th>Alumno</th>
     ${cols.map(c=>`<th>${c.label}</th>`).join('')}
-    <th>Promedio</th>
-  </tr>`;
-
-  // Distribution counters
-  let dist = {MB:0, B:0, S:0, NS:0, total:0};
-
-  const rows = STATE.students.map((stu, i) => {
-    const grades = cols.map(c => calcGrade(stu.id, c.s, c.b));
-    const valid  = grades.filter(g => g > 0);
-    const avg    = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 0;
-    const { lbl:avgLbl, cls:avgCls } = gradeLabel(avg);
-    if (avgLbl) { dist[avgLbl]++; dist.total++; }
+    <th>Promedio</th></tr>`;
+  let dist={MB:0,B:0,S:0,NS:0};
+  document.getElementById('rptBody').innerHTML=STATE.students.map((stu,i)=>{
+    const grades=cols.map(c=>calcGrade(stu.id,c.s,c.b));
+    const valid=grades.filter(g=>g>0);
+    const avg=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:0;
+    const{lbl:al,cls:ac}=gradeLabel(avg);
+    if(al)dist[al]++;
     return `<tr>
       <td style="color:var(--text3);">${i+1}</td>
       <td>${esc(stu.name)}</td>
-      ${grades.map(g => {
-        const {lbl,cls} = gradeLabel(g);
-        return `<td class="grade-cell">
-          <span class="grade-val ${cls}">${g>0?(g/10).toFixed(1):'–'}</span>
-          ${lbl?`<span style="font-size:.7rem;color:var(--text3);"> ${lbl}</span>`:''}
-        </td>`;
-      }).join('')}
+      ${grades.map(g=>{const{lbl,cls}=gradeLabel(g);return`<td class="grade-cell">
+        <span class="grade-val ${cls}">${g>0?(g/10).toFixed(1):'–'}</span>
+        ${lbl?`<span style="font-size:.7rem;color:var(--text3);"> ${lbl}</span>`:''}
+      </td>`;}).join('')}
       <td class="grade-cell">
-        <span class="grade-val ${avgCls}">${avg>0?(avg/10).toFixed(1):'–'}</span>
-        ${avgLbl?`<span style="font-size:.7rem;color:var(--text3);"> ${avgLbl}</span>`:''}
-      </td>
-    </tr>`;
+        <span class="grade-val ${ac}">${avg>0?(avg/10).toFixed(1):'–'}</span>
+        ${al?`<span style="font-size:.7rem;color:var(--text3);"> ${al}</span>`:''}
+      </td></tr>`;
+  }).join('');
+  document.getElementById('rptSummary').innerHTML=
+    [{v:dist.MB,l:'MB',c:'#4ade80'},{v:dist.B,l:'B',c:'#60a5fa'},
+     {v:dist.S,l:'S',c:'#fbbf24'},{v:dist.NS,l:'NS',c:'#f87171'},
+     {v:STATE.students.length,l:'Total',c:'var(--text2)'}]
+    .map(x=>`<div class="summary-card">
+      <div class="s-val" style="color:${x.c}">${x.v}</div>
+      <div class="s-lbl">${x.l}</div></div>`).join('');
+}
+function printReport(){window.print();}
+function exportExcel(){
+  const selSub=document.getElementById('rptSubject').value;
+  const selBim=document.getElementById('rptBim').value;
+  const subjects=selSub?[selSub]:SUBJECTS;
+  const n=STATE.config.bimestres||5;
+  const bims=selBim?[parseInt(selBim)]:Array.from({length:n},(_,i)=>i+1);
+  const cols=[];subjects.forEach(s=>bims.forEach(b=>cols.push({s,b,label:`${s} B${b}`})));
+  const header=['#','Alumno',...cols.map(c=>c.label),'Promedio'];
+  const data=[header];
+  STATE.students.forEach((stu,i)=>{
+    const grades=cols.map(c=>calcGrade(stu.id,c.s,c.b));
+    const valid=grades.filter(g=>g>0);
+    const avg=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:0;
+    data.push([i+1,stu.name,...grades.map(g=>g>0?(g/10).toFixed(1):''),avg>0?(avg/10).toFixed(1):'']);
   });
-
-  document.getElementById('rptBody').innerHTML = rows.join('');
-
-  // Summary
-  document.getElementById('rptSummary').innerHTML = [
-    { v:dist.MB, l:'MB', c:'#4ade80' },
-    { v:dist.B,  l:'B',  c:'#60a5fa' },
-    { v:dist.S,  l:'S',  c:'#fbbf24' },
-    { v:dist.NS, l:'NS', c:'#f87171' },
-    { v:STATE.students.length, l:'Total', c:'var(--text2)' },
-  ].map(x=>`<div class="summary-card">
-    <div class="s-val" style="color:${x.c}">${x.v}</div>
-    <div class="s-lbl">${x.l}</div>
-  </div>`).join('');
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Calificaciones');
+  const cfg=STATE.config;
+  XLSX.writeFile(wb,`Calificaciones_${cfg.grade||''}${cfg.group||''}_${cfg.year||''}.xlsx`);
 }
 
-function printReport() {
-  window.print();
-}
-
-function exportExcel() {
-  const selSub = document.getElementById('rptSubject').value;
-  const selBim = document.getElementById('rptBim').value;
-  const subjects = selSub ? [selSub] : SUBJECTS;
-  const n = STATE.config.bimestres || 5;
-  const bims = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
-  const cols = [];
-  subjects.forEach(s => bims.forEach(b => cols.push({s,b,label:`${s} B${b}`})));
-
-  const header = ['#','Alumno',...cols.map(c=>c.label),'Promedio'];
-  const data   = [header];
-  STATE.students.forEach((stu,i) => {
-    const grades = cols.map(c => calcGrade(stu.id,c.s,c.b));
-    const valid  = grades.filter(g=>g>0);
-    const avg    = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 0;
-    data.push([i+1, stu.name,
-      ...grades.map(g=>g>0?(g/10).toFixed(1):''),
-      avg>0?(avg/10).toFixed(1):'']);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Calificaciones');
-  const cfg = STATE.config;
-  const fname = `Calificaciones_${cfg.grade||''}${cfg.group||''}_${cfg.year||''}_${Date.now()}.xlsx`;
-  XLSX.writeFile(wb, fname);
-}
-
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    SYNC TAB
-═══════════════════════════════════════════════════════════════ */
-function updateSyncTab() {
-  const url = getApiUrl();
-  document.getElementById('apiUrlInput').value = url || '';
-  document.getElementById('apiUrlStatus').textContent = url ? '✅ URL configurada' : '';
-  setSyncUI(url ? 'ok' : 'idle');
+═══════════════════════════════════════════════════ */
+function updateSyncTab(){
+  const url=getApiUrl();
+  document.getElementById('apiUrlInput').value=url||'';
+  document.getElementById('apiUrlStatus').textContent=url?'✅ URL configurada':'';
+  setSyncUI(url?'ok':'idle');
 }
-
-function saveApiUrl() {
-  const url = document.getElementById('apiUrlInput').value.trim();
-  if (!url) { showToast('Ingresa una URL válida','warning'); return; }
-  localStorage.setItem(API_URL_KEY, url);
-  document.getElementById('apiUrlStatus').textContent = '✅ URL guardada';
+function saveApiUrl(){
+  const url=document.getElementById('apiUrlInput').value.trim();
+  if(!url){showToast('Ingresa una URL válida','warning');return;}
+  localStorage.setItem(API_URL_KEY,url);
+  document.getElementById('apiUrlStatus').textContent='✅ URL guardada';
   showToast('✅ URL guardada — iniciando sync…','success');
-  updateLoginScreen();
-  if (syncIntervalId) clearInterval(syncIntervalId);
+  if(syncIntervalId)clearInterval(syncIntervalId);
   doSync();
-  syncIntervalId = setInterval(() => doSync(), 60000);
+  syncIntervalId=setInterval(()=>doSync(),60000);
 }
 
-/* ─── URL Modal ─────────────────────────────────────────── */
-function showUrlModal() {
-  document.getElementById('modalUrlInput').value = getApiUrl();
-  document.getElementById('urlModal').classList.add('show');
-}
-function closeUrlModal() {
-  document.getElementById('urlModal').classList.remove('show');
-}
-function saveApiUrlFromModal() {
-  const url = document.getElementById('modalUrlInput').value.trim();
-  if (!url) { closeUrlModal(); return; }
-  localStorage.setItem(API_URL_KEY, url);
-  closeUrlModal();
-  updateLoginScreen();
-  showToast('✅ URL configurada','success');
-}
-document.getElementById('urlModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('urlModal')) closeUrlModal();
-});
-
-/* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    UTILIDADES
-═══════════════════════════════════════════════════════════════ */
-function uid() {
-  return Math.random().toString(36).slice(2,9) + Date.now().toString(36);
-}
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+═══════════════════════════════════════════════════ */
+function uid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-let toastTimer = null;
-function showToast(msg, type='success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className   = 'show ' + type;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+let toastTimer=null;
+function showToast(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+type;
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.className='';},3200);
 }
 </script>
 </body>
