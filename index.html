@@ -616,28 +616,90 @@ td.no-total .ctx-hint{color:var(--red);}
       <button class="btn btn-primary"  onclick="doSync()">⬇️ Actualizar desde nube</button>
       <button class="btn btn-outline"  onclick="doUpload(false)">⬆️ Subir a nube</button>
       <button class="btn btn-success"  onclick="doUpload(true)">⬆️⭐ Subir con logo</button>
-      <button class="btn btn-warning btn-sm" onclick="clearCache()">🗑️ Limpiar caché</button>
+    </div>
+    <!-- Caja de error persistente (no desaparece sola) -->
+    <div id="syncErrorBox" style="display:none;margin-top:12px;background:rgba(239,68,68,.12);
+      border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:12px 14px;">
+      <div style="font-weight:700;color:#f87171;margin-bottom:6px;">❌ Error de conexión</div>
+      <div id="syncErrorMsg" style="font-size:.82rem;color:var(--text);word-break:break-all;
+        font-family:monospace;"></div>
+      <div style="font-size:.75rem;color:var(--text3);margin-top:8px;line-height:1.5;">
+        Posibles causas:<br>
+        • La URL tiene espacios o caracteres extra<br>
+        • El acceso no está en <strong>"Cualquier usuario, incluso anónimo"</strong><br>
+        • El script no fue redesplegar después del último cambio
+      </div>
     </div>
   </div>
+
   <div class="card">
     <div class="card-title">🔗 URL del Apps Script</div>
+    <p style="font-size:.8rem;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+      Pega aquí la URL completa. En móvil, al pegar asegúrate que no haya espacios al inicio o al final.
+    </p>
     <div class="url-row">
-      <input type="text" id="apiUrlInput"
+      <input type="text" id="apiUrlInput" autocomplete="off" autocorrect="off"
+             autocapitalize="none" spellcheck="false"
              placeholder="https://script.google.com/macros/s/.../exec">
-      <button class="btn btn-primary" onclick="saveApiUrl()">Guardar</button>
+      <button class="btn btn-primary" onclick="saveApiUrl()">💾 Guardar</button>
     </div>
-    <div id="apiUrlStatus" style="font-size:.78rem;color:var(--text3);margin-top:6px;"></div>
+    <div id="apiUrlStatus" style="font-size:.78rem;margin-top:6px;"></div>
+
+    <!-- URL guardada actualmente, visible y con botones de acción -->
+    <div id="apiUrlCurrent" style="display:none;margin-top:12px;background:var(--bg3);
+      border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:6px;">URL guardada:</div>
+      <div id="apiUrlCurrentText" style="word-break:break-all;color:var(--green);
+        font-family:monospace;font-size:.72rem;line-height:1.5;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="copyApiUrl()">📋 Copiar</button>
+        <button class="btn btn-outline btn-sm" onclick="testApiUrl()">🔍 Probar</button>
+        <button class="btn btn-warning  btn-sm" onclick="clearApiUrl()">🗑️ Borrar</button>
+      </div>
+    </div>
+
+    <!-- Resultado detallado de la prueba -->
+    <div id="testResultBox" style="display:none;margin-top:10px;border-radius:8px;
+      padding:12px;font-size:.8rem;line-height:1.6;"></div>
   </div>
+
+  <!-- QR para pasar la URL al celular sin teclear -->
+  <div class="card" id="qrCard" style="display:none;">
+    <div class="card-title">📱 Escanear desde el celular</div>
+    <p style="font-size:.8rem;color:var(--text2);margin-bottom:12px;line-height:1.5;">
+      Escanea este código QR con la cámara de tu celular para abrir la app con la URL ya configurada.
+      No necesitas escribirla a mano.
+    </p>
+    <div style="text-align:center;padding:8px;">
+      <img id="qrImg" src="" alt="QR Code" style="border-radius:10px;max-width:220px;
+        background:#fff;padding:10px;box-shadow:0 2px 12px rgba(0,0,0,.3);">
+    </div>
+    <p style="font-size:.72rem;color:var(--text3);text-align:center;margin-top:8px;">
+      Al abrir el enlace en el celular, la URL se guardará automáticamente
+    </p>
+  </div>
+
   <div class="card">
     <div class="info-box">
-      <strong>Cómo configurar:</strong><br>
+      <strong>Cómo configurar Apps Script:</strong><br>
       1. Abre <strong>script.google.com</strong> → pega el Code.gs<br>
-      2. <strong>Implementar</strong> → Web app → Ejecutar como: <em>Yo</em><br>
-      3. Quién tiene acceso: <strong>Cualquier usuario, incluso anónimo</strong><br>
-      4. Copia la URL y pégala arriba → Guardar<br>
-      5. Presiona <strong>⬆️ Subir a nube</strong> desde la PC<br>
-      6. En el celular presiona <strong>⬇️ Actualizar</strong>
+      2. Ejecutar → <strong>initSheets</strong> (crea las hojas)<br>
+      3. Implementar → Aplicación web<br>
+      4. Ejecutar como: <em>Yo (tu cuenta Google)</em><br>
+      5. Acceso: <strong style="color:#4ade80;">Cualquier usuario, incluso anónimo</strong><br>
+      6. Copia la URL → pégala arriba → 💾 Guardar<br>
+      7. En PC: <strong>⬆️ Subir a nube</strong> para enviar datos<br>
+      8. En celular: escanea el QR o pega la URL → <strong>⬇️ Actualizar</strong>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗑️ Caché local</div>
+    <p style="font-size:.8rem;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+      Borra los datos guardados en este dispositivo y descarga la versión más reciente desde la nube.
+      <strong>La URL y los usuarios NO se borran.</strong>
+    </p>
+    <button class="btn btn-warning" onclick="clearCache()">🗑️ Limpiar caché y recargar</button>
   </div>
 </div>
 
@@ -706,6 +768,17 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
 
 function loadLocal(){
+  // Leer setup_url desde la URL (para QR desde PC → celular)
+  try{
+    const params=new URLSearchParams(window.location.search);
+    const setupUrl=params.get('setup_url');
+    if(setupUrl && setupUrl.startsWith('https://script.google.com')){
+      localStorage.setItem(API_URL_KEY, setupUrl);
+      // Limpiar la URL del navegador sin recargar
+      window.history.replaceState({},'',window.location.pathname);
+      setTimeout(()=>showToast('📱 URL configurada desde QR ✓','success'),800);
+    }
+  }catch(e){}
   STATE.config   = lsGet('calif_config',   STATE.config);
   STATE.students = lsGet('calif_students', []);
   STATE.weights  = lsGet('calif_weights',  {});
@@ -744,13 +817,15 @@ function apiPost(data){
 
 async function doSync(){
   const url=getApiUrl();
-  if(!url){showToast('Configura la URL en ☁️ Sincronizar','warning');return;}
+  if(!url){showSyncError('No hay URL configurada. Ve a ☁️ Sincronizar y pega tu URL.');return;}
   if(isSyncing)return;
   isSyncing=true; setSyncUI('syncing');
+  hideSyncError();
   try{
     const res=await apiGet('load');
+    if(!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
     const result=await res.json();
-    if(!result.success)throw new Error(result.error||'Error al cargar');
+    if(!result.success)throw new Error(result.error||'El servidor devolvió success:false');
     if(result.config)  {STATE.config=result.config;   lsSet('calif_config',  result.config);}
     if(result.students){STATE.students=result.students;lsSet('calif_students',result.students);}
     if(result.weights) {STATE.weights=result.weights;  lsSet('calif_weights', result.weights);}
@@ -767,30 +842,45 @@ async function doSync(){
     updateHeader(); refreshCurrentTab();
     showToast('☁️ Datos actualizados','success');
   }catch(err){
-    console.error('Sync:',err); setSyncUI('err');
-    showToast('Error al sincronizar: '+err.message,'error');
+    console.error('Sync:',err);
+    setSyncUI('err');
+    showSyncError(err.message);
+    showToast('Error al sincronizar','error');
   }finally{isSyncing=false;}
 }
 
 async function doUpload(withLogo=false){
   const url=getApiUrl();
-  if(!url){showToast('Configura la URL primero','warning');return;}
-  setSyncUI('syncing');
+  if(!url){showSyncError('No hay URL configurada. Ve a ☁️ Sincronizar y pega tu URL.');return;}
+  setSyncUI('syncing'); hideSyncError();
   try{
     const payload={action:'save',config:STATE.config,students:STATE.students,
                    weights:STATE.weights,totals:STATE.totals,raw:STATE.raw};
     if(withLogo)payload.logo=STATE.logo;
     const res=await apiPost(payload);
+    if(!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
     const result=await res.json();
-    if(!result.success)throw new Error(result.error||'Error al guardar');
+    if(!result.success)throw new Error(result.error||'El servidor devolvió success:false');
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     lsSet('calif_last_sync',now);
     setSyncUI('ok');
     showToast('☁️ Datos guardados en la nube ✓','success');
   }catch(err){
-    console.error('Upload:',err); setSyncUI('err');
-    showToast('Error al subir: '+err.message,'error');
+    console.error('Upload:',err);
+    setSyncUI('err');
+    showSyncError(err.message);
+    showToast('Error al subir','error');
   }
+}
+
+function showSyncError(msg){
+  const box=document.getElementById('syncErrorBox');
+  const txt=document.getElementById('syncErrorMsg');
+  if(box&&txt){txt.textContent=msg; box.style.display='';}
+}
+function hideSyncError(){
+  const box=document.getElementById('syncErrorBox');
+  if(box) box.style.display='none';
 }
 
 function setSyncUI(status){
@@ -1594,18 +1684,129 @@ function exportExcel(){
 function updateSyncTab(){
   const url=getApiUrl();
   document.getElementById('apiUrlInput').value=url||'';
-  document.getElementById('apiUrlStatus').textContent=url?'✅ URL configurada':'';
+  const statusEl=document.getElementById('apiUrlStatus');
+  const currentBox=document.getElementById('apiUrlCurrent');
+  const currentTxt=document.getElementById('apiUrlCurrentText');
+  if(url){
+    statusEl.innerHTML='<span style="color:var(--green)">✅ URL configurada</span>';
+    currentBox.style.display='';
+    currentTxt.textContent=url;
+    showQRCode(url);
+  } else {
+    statusEl.textContent='';
+    currentBox.style.display='none';
+    document.getElementById('qrCard').style.display='none';
+  }
   setSyncUI(url?'ok':'idle');
 }
+
 function saveApiUrl(){
-  const url=document.getElementById('apiUrlInput').value.trim();
-  if(!url){showToast('Ingresa una URL válida','warning');return;}
-  localStorage.setItem(API_URL_KEY,url);
-  document.getElementById('apiUrlStatus').textContent='✅ URL guardada';
-  showToast('✅ URL guardada — iniciando sync…','success');
+  let raw=document.getElementById('apiUrlInput').value;
+  // Limpieza agresiva: elimina espacios, saltos de línea, caracteres invisibles
+  let url = raw
+    .replace(/[\r\n\t]/g,'')      // saltos de línea y tabs
+    .replace(/\u00A0/g,'')        // non-breaking space
+    .replace(/[\u200B-\u200D\uFEFF]/g,'') // zero-width chars
+    .trim();
+
+  if(!url){
+    showSyncError('Ingresa la URL antes de guardar.');
+    showToast('Ingresa una URL válida','warning');
+    return;
+  }
+  if(!url.startsWith('https://script.google.com')){
+    showSyncError('La URL debe comenzar con https://script.google.com — verifica que copiaste la URL correcta desde Apps Script.');
+    showToast('URL incorrecta','error');
+    return;
+  }
+  hideSyncError();
+  localStorage.setItem(API_URL_KEY, url);
+  document.getElementById('apiUrlInput').value=url; // mostrar URL limpia
+  document.getElementById('apiUrlStatus').innerHTML=
+    '<span style="color:var(--green)">✅ URL guardada correctamente</span>';
+  const currentBox=document.getElementById('apiUrlCurrent');
+  document.getElementById('apiUrlCurrentText').textContent=url;
+  currentBox.style.display='';
+  showQRCode(url);
+  showToast('✅ URL guardada — probando conexión…','success');
   if(syncIntervalId)clearInterval(syncIntervalId);
   doSync();
   syncIntervalId=setInterval(()=>doSync(),60000);
+}
+
+function copyApiUrl(){
+  const url=getApiUrl();
+  if(!url)return;
+  navigator.clipboard.writeText(url).then(()=>{
+    showToast('📋 URL copiada al portapapeles','success');
+  }).catch(()=>{
+    // fallback para móviles sin clipboard API
+    const ta=document.createElement('textarea');
+    ta.value=url; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('📋 URL copiada','success');
+  });
+}
+
+function clearApiUrl(){
+  if(!confirm('¿Borrar la URL guardada?'))return;
+  localStorage.removeItem(API_URL_KEY);
+  document.getElementById('apiUrlInput').value='';
+  document.getElementById('apiUrlStatus').textContent='';
+  document.getElementById('apiUrlCurrent').style.display='none';
+  document.getElementById('qrCard').style.display='none';
+  setSyncUI('idle');
+  showToast('URL eliminada','warning');
+}
+
+async function testApiUrl(){
+  const url=getApiUrl();
+  if(!url){showSyncError('No hay URL configurada.');return;}
+  const box=document.getElementById('testResultBox');
+  box.style.display='';
+  box.style.background='rgba(124,58,237,.1)';
+  box.style.border='1px solid rgba(124,58,237,.3)';
+  box.textContent='⏳ Probando conexión…';
+  try{
+    const start=Date.now();
+    const res=await fetch(`${url}?action=load`);
+    const ms=Date.now()-start;
+    if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const data=await res.json();
+    if(data.success){
+      box.style.background='rgba(74,222,128,.1)';
+      box.style.border='1px solid rgba(74,222,128,.3)';
+      const alumnos=(data.students||[]).length;
+      const mats=Object.keys(data.weights||{}).length;
+      box.innerHTML=`✅ <strong>Conexión exitosa</strong> (${ms}ms)<br>
+        🏫 ${data.config?.schoolName||'–'}<br>
+        👥 ${alumnos} alumno(s) en la nube<br>
+        ⚖️ ${mats} configuración(es) de pesos`;
+      hideSyncError();
+    } else {
+      throw new Error(data.error||'success:false');
+    }
+  }catch(err){
+    box.style.background='rgba(239,68,68,.1)';
+    box.style.border='1px solid rgba(239,68,68,.3)';
+    box.innerHTML=`❌ <strong>Error:</strong> ${err.message}<br>
+      <span style="font-size:.75rem;color:var(--text3);">
+      Revisa que el acceso en Apps Script sea "Cualquier usuario, incluso anónimo"
+      y que hayas redesplegar con una nueva versión.</span>`;
+    showSyncError(err.message);
+  }
+}
+
+function showQRCode(url){
+  // QR que abre la app con la URL pre-cargada como parámetro
+  const appUrl=window.location.href.split('?')[0];
+  const deepUrl=`${appUrl}?setup_url=${encodeURIComponent(url)}`;
+  const qrApiUrl=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(deepUrl)}`;
+  const qrCard=document.getElementById('qrCard');
+  const qrImg=document.getElementById('qrImg');
+  qrImg.src=qrApiUrl;
+  qrCard.style.display='';
 }
 
 /* ═══════════════════════════════════════════════════
