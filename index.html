@@ -241,15 +241,16 @@ td input { padding:5px 7px; font-size:.82rem; width:100%; min-width:50px; }
       <h1 id="loginTitle">Sistema de Calificaciones</h1>
       <p id="loginSubtitle">Inicia sesión para continuar</p>
     </div>
-    <div id="loginUrlInfo" class="login-url no-url" id="loginUrlInfo">
+    <div id="loginUrlInfo" class="login-url no-url">
       <div id="loginUrlText">⚠️ Sin conexión — ingresa la URL del Apps Script:</div>
       <div style="display:flex;gap:6px;margin-top:7px;" id="loginUrlForm">
-        <input type="url" id="loginUrlField" placeholder="https://script.google.com/macros/s/.../exec"
-               style="flex:1;font-size:.75rem;padding:6px 8px;"
+        <input type="text" id="loginUrlField"
+               placeholder="https://script.google.com/macros/s/.../exec"
+               style="flex:1;font-size:.72rem;padding:6px 8px;"
                onkeydown="if(event.key==='Enter') saveApiUrlFromLogin()">
         <button onclick="saveApiUrlFromLogin()"
                 style="background:var(--accent);color:#fff;border:none;border-radius:6px;
-                       padding:6px 10px;cursor:pointer;font-size:.78rem;white-space:nowrap;">
+                       padding:6px 10px;cursor:pointer;font-size:.78rem;white-space:nowrap;flex-shrink:0;">
           Guardar
         </button>
       </div>
@@ -776,11 +777,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function saveApiUrlFromLogin() {
-  const url = document.getElementById('loginUrlField').value.trim();
-  if (!url) return;
-  localStorage.setItem(API_URL_KEY, url);
-  updateLoginScreen();
-  showToast('✅ URL guardada','success');
+  const field = document.getElementById('loginUrlField');
+  if (!field) { alert('Error: campo no encontrado'); return; }
+  const url = field.value.trim();
+  if (!url) { showToast('Pega la URL del Apps Script primero','warning'); return; }
+  try {
+    localStorage.setItem(API_URL_KEY, url);
+    // Also save in sync tab input if it exists
+    const syncInput = document.getElementById('apiUrlInput');
+    if (syncInput) syncInput.value = url;
+    updateLoginScreen();
+    showToast('✅ URL guardada — ahora ingresa tu usuario y contraseña','success');
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
 }
 
 function updateLoginScreen() {
