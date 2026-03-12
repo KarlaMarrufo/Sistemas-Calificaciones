@@ -797,35 +797,59 @@ function saveLocal(){
 }
 
 /* ═══════════════════════════════════════════════════
-   API — ARQUITECTURA HOTEL SHERATON
-   GET  → cargar   POST text/plain → guardar
+   API — XMLHttpRequest (más compatible con GAS en móvil)
+   fetch falla en iOS/Android por el redirect de GAS
+   XHR lo maneja correctamente en todos los dispositivos
 ═══════════════════════════════════════════════════ */
 function getApiUrl(){return localStorage.getItem(API_URL_KEY)||'';}
 
-function apiGet(action,params={}){
-  params.action=action;
-  const qs=new URLSearchParams(params).toString();
-  return fetch(`${getApiUrl()}?${qs}`);
-}
-function apiPost(data){
-  return fetch(getApiUrl(),{
-    method:'POST',
-    headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify(data)
+function apiCall(method, queryAction, postBody){
+  return new Promise((resolve,reject)=>{
+    const url=getApiUrl();
+    if(!url){reject(new Error('Sin URL configurada'));return;}
+    const xhr=new XMLHttpRequest();
+    const endpoint = method==='GET'
+      ? url+'?action='+queryAction+'&t='+Date.now()
+      : url;
+    xhr.open(method, endpoint, true);
+    xhr.timeout=20000;
+    if(method==='POST') xhr.setRequestHeader('Content-Type','text/plain;charset=utf-8');
+    xhr.onload=function(){
+      const text=xhr.responseText||'';
+      if(text.trim().startsWith('<')){
+        if(text.includes('accounts.google.com')||text.includes('ServiceLogin')){
+          reject(new Error('⛔ Google pide login.\n\nSolución: Apps Script → Implementar → editar → Acceso: "Cualquier usuario, incluso anónimo" → Nueva versión → Actualizar.'));
+        } else {
+          reject(new Error('Respuesta HTML inesperada (no JSON).\nPrimeros 150 chars: '+text.slice(0,150)));
+        }
+        return;
+      }
+      try{resolve(JSON.parse(text));}
+      catch(e){reject(new Error('JSON inválido.\nRecibido: '+text.slice(0,200)));}
+    };
+    xhr.onerror=function(){
+      reject(new Error('Error de red (XMLHttpRequest).\n\nPosibles causas:\n• Sin conexión a internet\n• La URL es incorrecta\n• Apps Script no está desplegado como app web\n\nVerifica abriendo la URL directamente en el navegador.'));
+    };
+    xhr.ontimeout=function(){
+      reject(new Error('Tiempo de espera agotado (20s).\nVerifica tu conexión o que el Apps Script esté activo.'));
+    };
+    xhr.send(postBody ? JSON.stringify(postBody) : null);
   });
 }
 
+function apiGet(action){ return apiCall('GET', action, null); }
+function apiPost(data){  return apiCall('POST', null, data);  }
+
+
+
 async function doSync(){
   const url=getApiUrl();
-  if(!url){showSyncError('No hay URL configurada. Ve a ☁️ Sincronizar y pega tu URL.');return;}
+  if(!url){showSyncError('No hay URL configurada.\nVe a ☁️ Sincronizar y pega tu URL de Apps Script.');return;}
   if(isSyncing)return;
-  isSyncing=true; setSyncUI('syncing');
-  hideSyncError();
+  isSyncing=true; setSyncUI('syncing'); hideSyncError();
   try{
-    const res=await apiGet('load');
-    if(!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
-    const result=await res.json();
-    if(!result.success)throw new Error(result.error||'El servidor devolvió success:false');
+    const result = await apiGet('load');
+    if(!result.success) throw new Error(result.error||'El servidor devolvió success:false');
     if(result.config)  {STATE.config=result.config;   lsSet('calif_config',  result.config);}
     if(result.students){STATE.students=result.students;lsSet('calif_students',result.students);}
     if(result.weights) {STATE.weights=result.weights;  lsSet('calif_weights', result.weights);}
@@ -842,41 +866,42 @@ async function doSync(){
     updateHeader(); refreshCurrentTab();
     showToast('☁️ Datos actualizados','success');
   }catch(err){
-    console.error('Sync:',err);
+    console.error('Sync error:',err);
     setSyncUI('err');
     showSyncError(err.message);
-    showToast('Error al sincronizar','error');
   }finally{isSyncing=false;}
 }
 
 async function doUpload(withLogo=false){
   const url=getApiUrl();
-  if(!url){showSyncError('No hay URL configurada. Ve a ☁️ Sincronizar y pega tu URL.');return;}
+  if(!url){showSyncError('No hay URL configurada.\nVe a ☁️ Sincronizar y pega tu URL de Apps Script.');return;}
   setSyncUI('syncing'); hideSyncError();
   try{
     const payload={action:'save',config:STATE.config,students:STATE.students,
                    weights:STATE.weights,totals:STATE.totals,raw:STATE.raw};
-    if(withLogo)payload.logo=STATE.logo;
-    const res=await apiPost(payload);
-    if(!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
-    const result=await res.json();
-    if(!result.success)throw new Error(result.error||'El servidor devolvió success:false');
+    if(withLogo) payload.logo=STATE.logo;
+    const result = await apiPost(payload);
+    if(!result.success) throw new Error(result.error||'El servidor devolvió success:false');
     const now=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     lsSet('calif_last_sync',now);
     setSyncUI('ok');
     showToast('☁️ Datos guardados en la nube ✓','success');
   }catch(err){
-    console.error('Upload:',err);
+    console.error('Upload error:',err);
     setSyncUI('err');
     showSyncError(err.message);
-    showToast('Error al subir','error');
   }
 }
 
 function showSyncError(msg){
   const box=document.getElementById('syncErrorBox');
   const txt=document.getElementById('syncErrorMsg');
-  if(box&&txt){txt.textContent=msg; box.style.display='';}
+  if(!box||!txt)return;
+  // Convertir saltos de línea en HTML
+  txt.innerHTML=msg.split('\n').map(l=>'<div style="margin-bottom:2px;">'+l+'</div>').join('');
+  box.style.display='';
+  // Hacer scroll al error en móvil
+  setTimeout(()=>box.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 function hideSyncError(){
   const box=document.getElementById('syncErrorBox');
@@ -1142,7 +1167,7 @@ function goTab(id){
   if(id==='aciertos') renderAciertosTabs();
   if(id==='grades')   renderGradesTable();
   if(id==='reports')  renderReport();
-  if(id==='sync')     updateSyncTab();
+  if(id==='sync'){updateSyncTab(); if(getApiUrl()) setTimeout(testApiUrl,400);}
   if(id==='usuarios') renderUsers();
 }
 function refreshCurrentTab(){
@@ -1765,37 +1790,32 @@ async function testApiUrl(){
   if(!url){showSyncError('No hay URL configurada.');return;}
   const box=document.getElementById('testResultBox');
   box.style.display='';
-  box.style.background='rgba(124,58,237,.1)';
-  box.style.border='1px solid rgba(124,58,237,.3)';
-  box.textContent='⏳ Probando conexión…';
+  box.style.cssText='border-radius:8px;padding:12px;margin-top:10px;font-size:.8rem;line-height:1.6;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);';
+  box.textContent='Probando conexion...';
+  const t0=Date.now();
   try{
-    const start=Date.now();
-    const res=await fetch(`${url}?action=load`);
-    const ms=Date.now()-start;
-    if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-    const data=await res.json();
+    const data = await apiGet('load');
+    const ms=Date.now()-t0;
     if(data.success){
-      box.style.background='rgba(74,222,128,.1)';
-      box.style.border='1px solid rgba(74,222,128,.3)';
-      const alumnos=(data.students||[]).length;
-      const mats=Object.keys(data.weights||{}).length;
-      box.innerHTML=`✅ <strong>Conexión exitosa</strong> (${ms}ms)<br>
-        🏫 ${data.config?.schoolName||'–'}<br>
-        👥 ${alumnos} alumno(s) en la nube<br>
-        ⚖️ ${mats} configuración(es) de pesos`;
+      box.style.cssText='border-radius:8px;padding:12px;margin-top:10px;font-size:.8rem;line-height:1.6;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);';
+      const esc2=s=>String(s||'').replace(/</g,'&lt;');
+      box.innerHTML='<strong style="color:#4ade80;">✅ Conexion exitosa</strong> <span style="color:var(--text3);">('+ms+'ms)</span><br>'+
+        '🏫 Escuela: <strong>'+esc2(data.config&&data.config.schoolName||'–')+'</strong><br>'+
+        '👥 Alumnos: <strong>'+((data.students||[]).length)+'</strong><br>'+
+        '🎯 Totales: <strong>'+Object.keys(data.totals||{}).length+'</strong><br>'+
+        '📝 Registros: <strong>'+Object.keys(data.raw||{}).length+'</strong>';
       hideSyncError();
     } else {
       throw new Error(data.error||'success:false');
     }
   }catch(err){
-    box.style.background='rgba(239,68,68,.1)';
-    box.style.border='1px solid rgba(239,68,68,.3)';
-    box.innerHTML=`❌ <strong>Error:</strong> ${err.message}<br>
-      <span style="font-size:.75rem;color:var(--text3);">
-      Revisa que el acceso en Apps Script sea "Cualquier usuario, incluso anónimo"
-      y que hayas redesplegar con una nueva versión.</span>`;
+    box.style.cssText='border-radius:8px;padding:12px;margin-top:10px;font-size:.8rem;line-height:1.6;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);';
+    const errHtml=err.message.split('\n').map(function(l){return '<div style="margin:2px 0;">'+l+'</div>';}).join('');
+    box.innerHTML='<strong style="color:#f87171;">❌ Error:</strong><br>'+errHtml;
     showSyncError(err.message);
   }
+}
+
 }
 
 function showQRCode(url){
