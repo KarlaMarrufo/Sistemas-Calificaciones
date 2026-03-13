@@ -2205,25 +2205,248 @@ function printReport(){
   window.print();
 }
 function exportExcel(){
-  const selSub=document.getElementById('rptSubject').value;
-  const selBim=document.getElementById('rptBim').value;
-  const subjects=selSub?[selSub]:SUBJECTS;
-  const n=STATE.config.bimestres||5;
-  const bims=selBim?[parseInt(selBim)]:Array.from({length:n},(_,i)=>i+1);
-  const cols=[];subjects.forEach(s=>bims.forEach(b=>cols.push({s,b,label:`${s} B${b}`})));
-  const header=['#','Alumno',...cols.map(c=>c.label),'Promedio'];
-  const data=[header];
+  if(typeof XLSX==='undefined'){showToast('SheetJS no cargado, intenta de nuevo','error');return;}
+  const cfg   = STATE.config;
+  const selSub= document.getElementById('rptSubject').value;
+  const selBim= document.getElementById('rptBim').value;
+  const subjects = selSub ? [selSub] : SUBJECTS;
+  const n    = cfg.bimestres||5;
+  const bims = selBim ? [parseInt(selBim)] : Array.from({length:n},(_,i)=>i+1);
+  const wb   = XLSX.utils.book_new();
+  const now  = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+
+  // ── Función auxiliar: nivel textual ──
+  function nivel(score10){
+    if(!score10||score10<=0) return '–';
+    if(score10>=9) return 'MB';
+    if(score10>=7) return 'B';
+    if(score10>=6) return 'S';
+    return 'NS';
+  }
+  function fmt(v){ return (v!=null&&v!==undefined&&!isNaN(v)&&v>0) ? parseFloat(v.toFixed(2)) : ''; }
+
+  /* ══════════════════════════════════════════
+     HOJA 1 — RESUMEN GENERAL
+     Columnas: #, Alumno, [MatBim cal.integrada...], Promedio, Nivel
+  ══════════════════════════════════════════ */
+  const cols=[];
+  subjects.forEach(s=>bims.forEach(b=>cols.push({s,b})));
+
+  const hdr1 = ['#','Alumno',
+    ...cols.map(c=>{
+      const sub=SUB_SUBJECTS[c.s];
+      return sub ? `${c.s}+${sub.name} B${c.b}` : `${c.s} B${c.b}`;
+    }),
+    'Promedio','Nivel'];
+
+  const info1 = [
+    [`Docente: ${cfg.teacherName||'–'}`],
+    [`Escuela: ${cfg.schoolName||'–'}`],
+    [`Grado: ${cfg.grade||'–'}  Grupo: ${cfg.group||'–'}  Año: ${cfg.year||'–'}`],
+    [`Generado: ${now}`],
+    [],
+    hdr1
+  ];
+
   STATE.students.forEach((stu,i)=>{
-    const grades=cols.map(c=>calcGrade(stu.id,c.s,c.b));
-    const valid=grades.filter(g=>g>0);
-    const avg=valid.length?valid.reduce((a,b)=>a+b,0)/valid.length:0;
-    data.push([i+1,stu.name,...grades.map(g=>g>0?(g/10).toFixed(1):''),avg>0?(avg/10).toFixed(1):'']);
+    const grades = cols.map(c=>{
+      const sc = calcIntegrated(stu.id,c.s,c.b);
+      return sc>0 ? parseFloat((sc/10).toFixed(2)) : '';
+    });
+    const valid = grades.filter(g=>g!=='');
+    const avg   = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 0;
+    info1.push([i+1, stu.name, ...grades,
+      avg>0?parseFloat(avg.toFixed(2)):'', avg>0?nivel(avg):'']);
   });
-  const ws=XLSX.utils.aoa_to_sheet(data);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Calificaciones');
-  const cfg=STATE.config;
-  XLSX.writeFile(wb,`Calificaciones_${cfg.grade||''}${cfg.group||''}_${cfg.year||''}.xlsx`);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(info1);
+  // Ancho de columnas
+  ws1['!cols'] = [{wch:4},{wch:32},...cols.map(()=>({wch:16})),{wch:10},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws1, '📊 Resumen');
+
+  /* ══════════════════════════════════════════
+     HOJA 2 — DETALLE COMPLETO POR CRITERIO
+     Una fila por alumno × materia × bimestre
+  ══════════════════════════════════════════ */
+  const hdr2 = [
+    '#','Alumno','Materia','Bimestre',
+    'Tareas Ent.','Tareas Total','Tareas %',
+    'Trabajos Ent.','Trabajos Total','Trabajos %',
+    'Disciplina %',
+    'Examen Ent.','Examen Total','Examen %',
+    'Cal. Mi Materia','Cal. Externa','Nombre Externa','Cal. Integrada','Nivel'
+  ];
+  const info2 = [
+    [`Docente: ${cfg.teacherName||'–'}  |  Escuela: ${cfg.schoolName||'–'}  |  ${cfg.grade||'–'} ${cfg.group||'–'}  |  ${cfg.year||'–'}`],
+    [`Generado: ${now}`],
+    [],
+    hdr2
+  ];
+
+  let rowNum=0;
+  STATE.students.forEach((stu,i)=>{
+    subjects.forEach(sub=>{
+      bims.forEach(b=>{
+        const w   = getWeights(sub,b);
+        const tot = getTotals(sub,b);
+        const r   = STATE.raw[`${stu.id}_${sub}_${b}`]||{};
+        const myScore = calcGrade(stu.id,sub,b);   // 0-100
+        const myGrade = myScore>0 ? myScore/10 : null;
+
+        // Calcular porcentajes individuales
+        const tPct = (tot.tareas>0 && r.t_ent!=null)  ? (r.t_ent/tot.tareas)*w.tareas   : null;
+        const wPct = (tot.trabajos>0&&r.w_ent!=null)  ? (r.w_ent/tot.trabajos)*w.trabajos: null;
+        const dPct = r.disc!=null                      ? parseFloat(r.disc)               : null;
+        const ePct = (tot.examen>0 && r.e_ent!=null)  ? (r.e_ent/tot.examen)*w.examen   : null;
+
+        const subDef  = SUB_SUBJECTS[sub];
+        const extVal  = subDef && r[subDef.key]!=null ? parseFloat(r[subDef.key]) : null;
+        const intGrade= myGrade!=null&&extVal!=null ? (myGrade+extVal)/2
+                       : myGrade!=null ? myGrade : extVal;
+
+        // Solo incluir si hay algún dato
+        const hasAny = r.t_ent!=null||r.w_ent!=null||r.disc!=null||r.e_ent!=null||extVal!=null;
+        if(!hasAny) return;
+
+        rowNum++;
+        info2.push([
+          rowNum, stu.name, sub, b,
+          r.t_ent!=null?r.t_ent:'',  tot.tareas||'',  tPct!=null?fmt(tPct):'',
+          r.w_ent!=null?r.w_ent:'',  tot.trabajos||'',wPct!=null?fmt(wPct):'',
+          dPct!=null?fmt(dPct):'',
+          r.e_ent!=null?r.e_ent:'',  tot.examen||'',  ePct!=null?fmt(ePct):'',
+          myGrade!=null?fmt(myGrade):'',
+          extVal!=null?extVal:'',
+          subDef?subDef.name:'–',
+          intGrade!=null?fmt(intGrade):'',
+          intGrade!=null?nivel(intGrade):'–'
+        ]);
+      });
+    });
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(info2);
+  ws2['!cols']=[{wch:4},{wch:32},{wch:12},{wch:6},
+    {wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:8},
+    {wch:10},{wch:10},{wch:10},{wch:8},
+    {wch:12},{wch:12},{wch:14},{wch:12},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws2, '📋 Detalle Criterios');
+
+  /* ══════════════════════════════════════════
+     HOJAS 3-N — UNA POR MATERIA
+     Columnas: Alumno, [Bim1, Bim2...], Promedio, Nivel
+     Con subdesglose: MiMateria | CalExterna | Integrada
+  ══════════════════════════════════════════ */
+  subjects.forEach(sub=>{
+    const subDef = SUB_SUBJECTS[sub];
+    const hdrSub = ['#','Alumno'];
+    bims.forEach(b=>{
+      hdrSub.push(`Bim${b} Tareas%`);
+      hdrSub.push(`Bim${b} Trabajos%`);
+      hdrSub.push(`Bim${b} Disciplina%`);
+      hdrSub.push(`Bim${b} Examen%`);
+      hdrSub.push(`Bim${b} Mi Materia`);
+      if(subDef){ hdrSub.push(`Bim${b} ${subDef.name}`); }
+      hdrSub.push(`Bim${b} ${subDef?'Integrada':'Cal.'}`);
+      hdrSub.push(`Bim${b} Nivel`);
+    });
+    hdrSub.push('Promedio Anual','Nivel');
+
+    const infoSub=[
+      [`Materia: ${sub}${subDef?' (integra con '+subDef.name+')':''}`],
+      [`Docente: ${cfg.teacherName||'–'}  |  ${cfg.grade||'–'} ${cfg.group||'–'}  |  ${cfg.year||'–'}`],
+      [`Generado: ${now}`],
+      [],
+      hdrSub
+    ];
+
+    STATE.students.forEach((stu,i)=>{
+      const row=[i+1, stu.name];
+      const allGrades=[];
+      bims.forEach(b=>{
+        const w   = getWeights(sub,b);
+        const tot = getTotals(sub,b);
+        const r   = STATE.raw[`${stu.id}_${sub}_${b}`]||{};
+        const myScore = calcGrade(stu.id,sub,b);
+        const myGrade = myScore>0?myScore/10:null;
+
+        const tPct=(tot.tareas>0&&r.t_ent!=null)?(r.t_ent/tot.tareas)*w.tareas:null;
+        const wPct=(tot.trabajos>0&&r.w_ent!=null)?(r.w_ent/tot.trabajos)*w.trabajos:null;
+        const dPct=r.disc!=null?parseFloat(r.disc):null;
+        const ePct=(tot.examen>0&&r.e_ent!=null)?(r.e_ent/tot.examen)*w.examen:null;
+        const extVal=subDef&&r[subDef.key]!=null?parseFloat(r[subDef.key]):null;
+        const intGrade=myGrade!=null&&extVal!=null?(myGrade+extVal)/2
+                      :myGrade!=null?myGrade:extVal;
+
+        row.push(tPct!=null?fmt(tPct):'');
+        row.push(wPct!=null?fmt(wPct):'');
+        row.push(dPct!=null?fmt(dPct):'');
+        row.push(ePct!=null?fmt(ePct):'');
+        row.push(myGrade!=null?fmt(myGrade):'');
+        if(subDef){ row.push(extVal!=null?extVal:''); }
+        row.push(intGrade!=null?fmt(intGrade):'');
+        row.push(intGrade!=null?nivel(intGrade):'–');
+        if(intGrade!=null) allGrades.push(intGrade);
+      });
+      const prom=allGrades.length?allGrades.reduce((a,b)=>a+b,0)/allGrades.length:0;
+      row.push(prom>0?fmt(prom):'', prom>0?nivel(prom):'–');
+      infoSub.push(row);
+    });
+
+    const wsSub=XLSX.utils.aoa_to_sheet(infoSub);
+    // Ancho dinámico
+    const ncols=hdrSub.length;
+    wsSub['!cols']=[{wch:4},{wch:32},...Array(ncols-2).fill({wch:12})];
+    // Nombre de hoja máx 31 chars
+    const shName=(subDef?`${sub}+${subDef.name}`:sub).substring(0,31);
+    XLSX.utils.book_append_sheet(wb, wsSub, shName);
+  });
+
+  /* ══════════════════════════════════════════
+     HOJA FINAL — CONFIGURACIÓN USADA
+  ══════════════════════════════════════════ */
+  const cfgData=[
+    ['CONFIGURACIÓN DEL PERIODO EXPORTADO'],
+    [],
+    ['Docente',    cfg.teacherName||'–'],
+    ['Escuela',    cfg.schoolName||'–'],
+    ['Grado',      cfg.grade||'–'],
+    ['Grupo',      cfg.group||'–'],
+    ['Año escolar',cfg.year||'–'],
+    ['Bimestres',  cfg.bimestres||5],
+    ['Materias exportadas', subjects.join(', ')],
+    ['Bimestres exportados', bims.join(', ')],
+    ['Generado el', now],
+    [],
+    ['PESOS POR MATERIA Y BIMESTRE'],
+    ['Materia','Bimestre','Tareas %','Trabajos %','Disciplina %','Examen %']
+  ];
+  subjects.forEach(sub=>bims.forEach(b=>{
+    const w=getWeights(sub,b);
+    cfgData.push([sub,b,w.tareas,w.trabajos,w.disciplina,w.examen]);
+  }));
+  cfgData.push([]);
+  cfgData.push(['TOTALES CONFIGURADOS POR MATERIA Y BIMESTRE']);
+  cfgData.push(['Materia','Bimestre','Total Tareas','Total Trabajos','Total Examen']);
+  subjects.forEach(sub=>bims.forEach(b=>{
+    const t=getTotals(sub,b);
+    if(t.tareas||t.trabajos||t.examen)
+      cfgData.push([sub,b,t.tareas,t.trabajos,t.examen]);
+  }));
+  cfgData.push([]);
+  cfgData.push(['ESCALA DE CALIFICACIONES']);
+  cfgData.push(['MB','Muy Bien','9.0 – 10.0']);
+  cfgData.push(['B', 'Bien',    '7.0 – 8.9']);
+  cfgData.push(['S', 'Suficiente','6.0 – 6.9']);
+  cfgData.push(['NS','No Suficiente','< 6.0']);
+
+  const wsCfg=XLSX.utils.aoa_to_sheet(cfgData);
+  wsCfg['!cols']=[{wch:24},{wch:30},{wch:12},{wch:12},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsCfg, '⚙️ Config');
+
+  const fname=`Calificaciones_${cfg.grade||''}${cfg.group||''}_${cfg.year||''}_${selSub||'TodosMat'}_${selBim?'B'+selBim:'TodosBim'}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast(`✅ Excel exportado — ${wb.SheetNames.length} hojas`,'success');
 }
 
 /* ═══════════════════════════════════════════════════
