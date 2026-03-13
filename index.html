@@ -510,10 +510,14 @@ td.no-total .ctx-hint{color:var(--red);}
   <div class="card">
     <div class="card-title">🏫 Datos del Grupo</div>
     <div class="row">
-      <div class="field"><label>Nombre de la Escuela</label>
-        <input id="cfgSchool" placeholder="Ej. Escuela Primaria..."></div>
+      <div class="field"><label>Nombre del Docente</label>
+        <input id="cfgTeacher" placeholder="Ej. Mtra. Karla Marrufo"></div>
       <div class="field"><label>Año Escolar</label>
         <input id="cfgYear" placeholder="2024-2025"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:2"><label>Nombre de la Escuela</label>
+        <input id="cfgSchool" placeholder="Ej. Escuela Primaria..."></div>
     </div>
     <div class="row">
       <div class="field"><label>Grado</label>
@@ -835,6 +839,13 @@ td.no-total .ctx-hint{color:var(--red);}
    CONSTANTES
 ═══════════════════════════════════════════════════ */
 const SUBJECTS    = ['Lenguajes','Saberes','Ética','Humano'];
+// Materias secundarias que promedian con la materia principal
+// El docente externo proporciona una calificación (0-10) que se promedia con la calificación de la materia
+const SUB_SUBJECTS = {
+  'Lenguajes': {name:'Artes',       key:'artes'},
+  'Humano':    {name:'Ed. Física',  key:'edFisica'},
+  'Saberes':   {name:'Computación', key:'computo'},
+};
 const CRITERIA    = ['tareas','trabajos','disciplina','examen'];
 const CRIT_LABELS = {tareas:'Tareas',trabajos:'Trabajos',disciplina:'Disciplina',examen:'Examen'};
 const DEF_W       = {tareas:20,trabajos:20,disciplina:20,examen:40};
@@ -846,7 +857,7 @@ const API_URL_KEY = 'calif_api_url';
    ESTADO
 ═══════════════════════════════════════════════════ */
 let STATE = {
-  config:   {schoolName:'',year:'',grade:'',group:'',bimestres:5},
+  config:   {schoolName:'',teacherName:'',year:'',grade:'',group:'',bimestres:5},
   students: [],
   weights:  {},
   totals:   {},   /* { 'Materia_Bim': {tareas:50, trabajos:10, examen:40} } */
@@ -1258,6 +1269,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 function onAppStart(){
+  applyRoleUI();
   updateHeader();
   buildSubjectTabs(); buildBimTabs();
   buildAcSubjectTabs(); buildAcBimTabs();
@@ -1272,9 +1284,53 @@ function onAppStart(){
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   PERMISOS POR ROL
+   Admin  → acceso total (ve todo)
+   Docente → solo captura calificaciones, sin Usuarios ni Sincronizar
+═══════════════════════════════════════════════════ */
+function applyRoleUI(){
+  const isAdmin = currentUser && currentUser.role==='admin';
+  // Pestañas visibles según rol
+  const adminOnly = ['nav-usuarios','nav-sync','nav-config','nav-aciertos'];
+  adminOnly.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=isAdmin?'':'none';
+  });
+  // Badge de rol en el header
+  let badge=document.getElementById('roleBadge');
+  if(!badge){
+    badge=document.createElement('div');
+    badge.id='roleBadge';
+    badge.style.cssText='font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:20px;margin-left:6px;white-space:nowrap;';
+    document.querySelector('.hdr-sync').before(badge);
+  }
+  if(isAdmin){
+    badge.textContent='🛡️ Admin';
+    badge.style.background='rgba(124,58,237,.25)';
+    badge.style.color='#a78bfa';
+    badge.style.border='1px solid rgba(124,58,237,.4)';
+  } else {
+    badge.textContent='👩‍🏫 Docente';
+    badge.style.background='rgba(22,163,74,.2)';
+    badge.style.color='#4ade80';
+    badge.style.border='1px solid rgba(22,163,74,.35)';
+  }
+  // Si el tab activo es uno que ya no puede ver, redirigir a grades
+  if(!isAdmin){
+    const active=document.querySelector('.nav-btn.active');
+    if(active && adminOnly.includes(active.id)){
+      goTab('grades');
+    }
+  }
+}
+
 function updateHeader(){
   const cfg=STATE.config;
-  document.getElementById('hdrTitle').textContent=cfg.schoolName||'Sistema de Calificaciones';
+  // Título: nombre del docente (prominente) + escuela en letra pequeña/tenue
+  const teacher=cfg.teacherName||'Sistema de Calificaciones';
+  const school=cfg.schoolName?`<span style="font-size:.72rem;color:var(--text3);font-weight:400;display:block;line-height:1.1;">${esc(cfg.schoolName)}</span>`:'';
+  document.getElementById('hdrTitle').innerHTML=esc(teacher)+school;
   document.getElementById('hdrSub').textContent=
     [cfg.grade&&cfg.grade+(cfg.group?' '+cfg.group:''),cfg.year].filter(Boolean).join(' · ')||'–';
   if(STATE.logo){
@@ -1308,11 +1364,12 @@ function refreshCurrentTab(){
 ═══════════════════════════════════════════════════ */
 function updateConfigForm(){
   const c=STATE.config;
-  document.getElementById('cfgSchool').value=c.schoolName||'';
-  document.getElementById('cfgYear').value  =c.year||'';
-  document.getElementById('cfgGrade').value =c.grade||'';
-  document.getElementById('cfgGroup').value =c.group||'';
-  document.getElementById('cfgBim').value   =String(c.bimestres||5);
+  document.getElementById('cfgSchool').value  =c.schoolName||'';
+  document.getElementById('cfgTeacher').value =c.teacherName||'';
+  document.getElementById('cfgYear').value    =c.year||'';
+  document.getElementById('cfgGrade').value   =c.grade||'';
+  document.getElementById('cfgGroup').value   =c.group||'';
+  document.getElementById('cfgBim').value     =String(c.bimestres||5);
   if(STATE.logo){
     document.getElementById('logoPreview').src=STATE.logo;
     document.getElementById('logoPreview').style.display='block';
@@ -1324,11 +1381,12 @@ function updateConfigForm(){
 }
 function saveConfig(){
   STATE.config={
-    schoolName:document.getElementById('cfgSchool').value.trim(),
-    year:      document.getElementById('cfgYear').value.trim(),
-    grade:     document.getElementById('cfgGrade').value.trim(),
-    group:     document.getElementById('cfgGroup').value.trim(),
-    bimestres: parseInt(document.getElementById('cfgBim').value)||5,
+    schoolName:  document.getElementById('cfgSchool').value.trim(),
+    teacherName: document.getElementById('cfgTeacher').value.trim(),
+    year:        document.getElementById('cfgYear').value.trim(),
+    grade:       document.getElementById('cfgGrade').value.trim(),
+    group:       document.getElementById('cfgGroup').value.trim(),
+    bimestres:   parseInt(document.getElementById('cfgBim').value)||5,
   };
   saveLocal(); updateHeader(); buildBimTabs(); updateLoginLogo();
   showToast('✅ Configuración guardada','success');
@@ -1579,6 +1637,7 @@ function renderGradesTable(){
            style="color:#fbbf24;text-decoration:underline;margin-left:6px;">→ Configurar en 🎯 Puntuaje</a>
       </div>` : '';
 
+  const subDef = SUB_SUBJECTS[curSubject];
   head.innerHTML=`<tr>
     <th>#</th><th>Alumno</th>
     <th title="Tareas entregadas / ${hasTareas?tot.tareas:'?'} · ${w.tareas}%">
@@ -1589,7 +1648,9 @@ function renderGradesTable(){
       Disciplina<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">0–${w.disciplina}%</span></th>
     <th title="Puntuaje del examen / ${hasExamen?tot.examen:'?'} reactivos · ${w.examen}%">
       Examen${hasExamen?`<br><span style="font-weight:400;color:var(--text3);font-size:.7rem;">de ${tot.examen}</span>`:'<br><span style="color:var(--red);font-size:.68rem;">sin config</span>'}</th>
-    <th>Calificación</th></tr>`;
+    ${subDef?`<th title="${subDef.name} — calificación proporcionada por el docente externo (0–10)">
+      ${subDef.name}<br><span style="font-weight:400;color:var(--purple);font-size:.7rem;">Cal. externa</span></th>`:''}
+    <th>Cal. ${subDef?'Integrada':''}</th></tr>`;
 
   const tableWrap = document.querySelector('#tab-grades .tbl-wrap');
   if(tableWrap){
@@ -1609,6 +1670,14 @@ function renderGradesTable(){
     const wHint = hasTrab     ? `${r.w_ent!=null?r.w_ent:'–'}/${tot.trabajos} = ${bd.wPct!=null?bd.wPct.toFixed(1)+'%':'–'}` : '';
     const eHint = hasExamen   ? `${r.e_ent!=null?r.e_ent:'–'}/${tot.examen} = ${bd.ePct!=null?bd.ePct.toFixed(1)+'%':'–'}` : '';
     const dHint = `= ${r.disc!=null?r.disc:'–'}% de ${w.disciplina}%`;
+    // Calificación externa (sub-materia)
+    const subVal = subDef && r[subDef.key]!=null ? parseFloat(r[subDef.key]) : null;
+    // Calificación integrada = promedio de (mi calificación + calificación externa)
+    const myGrade = grade>0 ? grade/10 : null;
+    const intGrade = (myGrade!=null && subVal!=null) ? ((myGrade+subVal)/2) :
+                     (myGrade!=null ? myGrade : null);
+    const intScore = intGrade!=null ? intGrade*10 : 0;
+    const{lbl:ilbl,cls:icls}=gradeLabel(intScore);
     return `<tr data-sid="${s.id}">
       <td style="color:var(--text3);">${i+1}</td>
       <td style="font-weight:500;">${esc(s.name)}</td>
@@ -1640,10 +1709,24 @@ function renderGradesTable(){
                  value="${r.e_ent!=null?r.e_ent:''}" placeholder="0">
           <span class="ctx-hint ${!hasExamen?'warn':''}">${hasExamen?eHint:'Sin total'}</span>
         </div></td>
+      ${subDef?`<td>
+        <div class="input-ctx">
+          <input type="number" min="0" max="10" step="0.1" class="raw-in sub-in"
+                 data-f="${subDef.key}" data-sid="${s.id}"
+                 value="${subVal!=null?subVal:''}" placeholder="0.0"
+                 style="border-color:rgba(124,58,237,.5);">
+          <span class="ctx-hint" style="color:var(--purple);">${subVal!=null?'Cal. '+subVal.toFixed(1):'Del docente'}</span>
+        </div></td>`:''}
       <td class="grade-cell">
-        <span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
+        ${subDef?`
+        <span class="grade-val ${icls}">${intGrade!=null?intGrade.toFixed(1):'–'}</span>
+        <span class="grade-lbl ${icls}">${ilbl}</span>
+        ${myGrade!=null?`<div class="grade-breakdown">
+          Mi materia: ${myGrade.toFixed(1)}${subVal!=null?' · '+subDef.name+': '+subVal.toFixed(1)+' → Prom: '+intGrade.toFixed(1):''}
+        </div>`:''}`:
+        `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
         <span class="grade-lbl ${cls}">${lbl}</span>
-        ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}
+        ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}`}
       </td></tr>`;
   }).join('');
 
@@ -1697,6 +1780,18 @@ function collectRowRaw(sid){
     r[inp.dataset.f]=isNaN(v)?undefined:v;
   });
   STATE.raw[k]=r;
+}
+/* Calificación integrada (mi materia + externa) para un alumno */
+function calcIntegrated(sid,subject,bim){
+  const myScore=calcGrade(sid,subject,bim); // 0–100
+  const subDef=SUB_SUBJECTS[subject];
+  if(!subDef) return myScore;
+  const r=STATE.raw[`${sid}_${subject}_${bim}`]||{};
+  const extVal=r[subDef.key]!=null?parseFloat(r[subDef.key]):null;
+  if(myScore<=0 && extVal==null) return 0;
+  if(myScore<=0) return extVal*10;
+  if(extVal==null) return myScore;
+  return ((myScore/10)+extVal)/2*10; // promedio en escala 0–100
 }
 function saveGrades(){
   STATE.students.forEach(s=>collectRowRaw(s.id));
@@ -1799,7 +1894,7 @@ function renderReport(){
     const combos=[]; // {subject, bim, score, bd}
     subjects.forEach(sub=>{
       bims.forEach(b=>{
-        const score=calcGrade(stu.id,sub,b);
+        const score=calcIntegrated(stu.id,sub,b);
         const w=Object.assign({},DEF_W,STATE.weights[`${sub}_${b}`]);
         const tot=getTotals(sub,b);
         const r=STATE.raw[`${stu.id}_${sub}_${b}`]||{};
