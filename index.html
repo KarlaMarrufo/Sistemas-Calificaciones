@@ -230,6 +230,11 @@ td input{padding:5px 7px;font-size:.82rem;width:100%;min-width:50px;}
 .grade-lbl{font-size:.72rem;margin-left:3px;font-weight:600;}
 .MB{color:#4ade80;} .B{color:#60a5fa;} .S{color:#fbbf24;} .NS{color:#f87171;}
 .grade-cell{text-align:center;min-width:90px;}
+.row-save-btn{margin-top:5px;padding:4px 10px;font-size:.72rem;font-weight:600;
+  background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.45);
+  color:#a5b4fc;border-radius:20px;cursor:pointer;transition:all .15s;display:block;width:100%;}
+.row-save-btn:hover{background:rgba(99,102,241,.35);color:#fff;}
+.row-save-btn.saved{background:rgba(22,163,74,.18);border-color:rgba(22,163,74,.4);color:#4ade80;}
 .grade-breakdown{font-size:.64rem;color:var(--text3);margin-top:3px;
   white-space:nowrap;letter-spacing:.01em;line-height:1.4;}
 /* Celdas de captura con contexto */
@@ -1743,7 +1748,7 @@ function renderGradesTable(){
                  style="border-color:rgba(124,58,237,.5);">
           <span class="ctx-hint" style="color:var(--purple);">${subVal!=null?'Cal. '+subVal.toFixed(1):'Del docente'}</span>
         </div></td>`:''}
-      <td class="grade-cell">
+      <td class="grade-cell" id="gcell_${s.id}">
         ${subDef?`
         <span class="grade-val ${icls}">${intGrade!=null?intGrade.toFixed(1):'–'}</span>
         <span class="grade-lbl ${icls}">${ilbl}</span>
@@ -1753,6 +1758,7 @@ function renderGradesTable(){
         `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
         <span class="grade-lbl ${cls}">${lbl}</span>
         ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}`}
+        <button class="row-save-btn" id="rsave_${s.id}" onclick="saveRow('${s.id}')">💾 Guardar</button>
       </td></tr>`;
   }).join('');
 
@@ -1763,39 +1769,90 @@ function renderGradesTable(){
 
 function updateRowGrade(sid){
   collectRowRaw(sid);
-  // Auto-guardar local inmediatamente; subir a nube con debounce 1.5s
   saveLocal();
   clearTimeout(window._gradeUploadTimer);
   window._gradeUploadTimer=setTimeout(()=>{if(getApiUrl())doUpload(false);},1500);
-  const grade=calcGrade(sid,curSubject,curBim);
-  const{lbl,cls}=gradeLabel(grade);
-  const tot=getTotals(curSubject,curBim);
-  const w=getWeights();
-  const bd=calcBreakdown(sid,curSubject,curBim,tot,w);
-  // Actualizar hints de contexto en la misma fila
-  const row=document.querySelector(`tr[data-sid="${sid}"]`);
-  if(!row)return;
-  const r=STATE.raw[`${sid}_${curSubject}_${curBim}`]||{};
+
+  const grade = calcGrade(sid,curSubject,curBim);
+  const {lbl,cls} = gradeLabel(grade);
+  const tot = getTotals(curSubject,curBim);
+  const w   = getWeights();
+  const bd  = calcBreakdown(sid,curSubject,curBim,tot,w);
+  const row = document.querySelector(`tr[data-sid="${sid}"]`);
+  if(!row) return;
+  const r = STATE.raw[`${sid}_${curSubject}_${curBim}`]||{};
+
+  // Actualizar hints de contexto
   if(tot.tareas>0){
-    const hint=row.querySelector(`[data-f="t_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
-    if(hint) hint.textContent=`${r.t_ent!=null?r.t_ent:'–'}/${tot.tareas} = ${bd.tPct!=null?bd.tPct.toFixed(1)+'%':'–'}`;
+    const h=row.querySelector('[data-f="t_ent"]')?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(h) h.textContent=`${r.t_ent!=null?r.t_ent:'–'}/${tot.tareas} = ${bd.tPct!=null?bd.tPct.toFixed(1)+'%':'–'}`;
   }
   if(tot.trabajos>0){
-    const hint=row.querySelector(`[data-f="w_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
-    if(hint) hint.textContent=`${r.w_ent!=null?r.w_ent:'–'}/${tot.trabajos} = ${bd.wPct!=null?bd.wPct.toFixed(1)+'%':'–'}`;
+    const h=row.querySelector('[data-f="w_ent"]')?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(h) h.textContent=`${r.w_ent!=null?r.w_ent:'–'}/${tot.trabajos} = ${bd.wPct!=null?bd.wPct.toFixed(1)+'%':'–'}`;
   }
   if(tot.examen>0){
-    const hint=row.querySelector(`[data-f="e_ent"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
-    if(hint) hint.textContent=`${r.e_ent!=null?r.e_ent:'–'}/${tot.examen} = ${bd.ePct!=null?bd.ePct.toFixed(1)+'%':'–'}`;
+    const h=row.querySelector('[data-f="e_ent"]')?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    if(h) h.textContent=`${r.e_ent!=null?r.e_ent:'–'}/${tot.examen} = ${bd.ePct!=null?bd.ePct.toFixed(1)+'%':'–'}`;
   }
-  {
-    const hint=row.querySelector(`[data-f="disc"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
-    if(hint) hint.textContent=`= ${r.disc!=null?r.disc:'–'}% de ${w.disciplina}%`;
+  const hd=row.querySelector('[data-f="disc"]')?.closest('.input-ctx')?.querySelector('.ctx-hint');
+  if(hd) hd.textContent=`= ${r.disc!=null?r.disc:'–'}% de ${w.disciplina}%`;
+
+  // Actualizar sub-materia hint
+  const subDef = SUB_SUBJECTS[curSubject];
+  if(subDef){
+    const hs=row.querySelector(`[data-f="${subDef.key}"]`)?.closest('.input-ctx')?.querySelector('.ctx-hint');
+    const sv=r[subDef.key]!=null?parseFloat(r[subDef.key]):null;
+    if(hs) hs.textContent=sv!=null?`Cal. ${sv.toFixed(1)}`:'Del docente';
   }
-  row.querySelector('.grade-cell').innerHTML=
-    `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
-     <span class="grade-lbl ${cls}">${lbl}</span>
-     ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}`;
+
+  // Recalcular y mostrar Cal. Integrada
+  refreshGradeCell(sid, row, grade, bd, cls, lbl);
+}
+
+/* Recalcula y repinta la celda de calificación (con Cal. Integrada si aplica) */
+function refreshGradeCell(sid, row, grade, bd, cls, lbl){
+  const subDef = SUB_SUBJECTS[curSubject];
+  const r = STATE.raw[`${sid}_${curSubject}_${curBim}`]||{};
+  const myGrade = grade>0 ? grade/10 : null;
+  const subVal  = subDef && r[subDef.key]!=null ? parseFloat(r[subDef.key]) : null;
+  const intGrade = (myGrade!=null && subVal!=null) ? (myGrade+subVal)/2
+                 : (myGrade!=null ? myGrade : null);
+  const intScore = intGrade!=null ? intGrade*10 : 0;
+  const {lbl:ilbl,cls:icls} = gradeLabel(intScore);
+
+  const cell = row.querySelector('.grade-cell');
+  if(!cell) return;
+
+  let html = '';
+  if(subDef){
+    html = `<span class="grade-val ${icls}">${intGrade!=null?intGrade.toFixed(1):'–'}</span>
+            <span class="grade-lbl ${icls}">${ilbl}</span>
+            ${myGrade!=null?`<div class="grade-breakdown">
+              Mi mat: ${myGrade.toFixed(1)}${subVal!=null?' · '+subDef.name+': '+subVal.toFixed(1)+' → <b>'+intGrade.toFixed(1)+'</b>':''}
+            </div>`:''}`;
+  } else {
+    html = `<span class="grade-val ${cls}">${grade>0?(grade/10).toFixed(1):'–'}</span>
+            <span class="grade-lbl ${cls}">${lbl}</span>
+            ${grade>0?`<div class="grade-breakdown">${bd.formula}</div>`:''}`;
+  }
+  // Preservar el botón 💾 Guardar
+  html += `<button class="row-save-btn" id="rsave_${sid}" onclick="saveRow('${sid}')">💾 Guardar</button>`;
+  cell.innerHTML = html;
+}
+
+/* Guardar fila individual y confirmar visualmente */
+function saveRow(sid){
+  collectRowRaw(sid);
+  saveLocal();
+  if(getApiUrl()) doUpload(false);
+  // Feedback visual en el botón
+  const btn=document.getElementById('rsave_'+sid);
+  if(btn){
+    btn.textContent='✅ Guardado';
+    btn.classList.add('saved');
+    setTimeout(()=>{ btn.textContent='💾 Guardar'; btn.classList.remove('saved'); },2000);
+  }
 }
 
 function collectRowRaw(sid){
