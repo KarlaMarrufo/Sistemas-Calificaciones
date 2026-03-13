@@ -1423,16 +1423,20 @@ function renderStudents(){
     return;
   }
   tbody.innerHTML=STATE.students.map((s,i)=>`
-    <tr>
+    <tr id="str_${s.id}">
       <td style="color:var(--text3);">${i+1}</td>
       <td>
         <span id="sname_${s.id}">${esc(s.name)}</span>
-        <input id="sedit_${s.id}" value="${esc(s.name)}" style="display:none;"
-               onkeydown="if(event.key==='Enter')saveStudentName('${s.id}')">
+        <input id="sedit_${s.id}" value="${esc(s.name)}" style="display:none;width:calc(100% - 8px);"
+               onkeydown="if(event.key==='Enter')saveStudentName('${s.id}')"
+               onblur="setTimeout(()=>saveStudentName('${s.id}'),200)">
       </td>
-      <td>
-        <button class="edit-btn" onclick="toggleEditStudent('${s.id}')">✏️</button>
-        <button class="del-btn"  onclick="deleteStudent('${s.id}')">🗑️</button>
+      <td style="white-space:nowrap;">
+        <button class="edit-btn" id="ebtn_${s.id}" onclick="toggleEditStudent('${s.id}')" title="Editar nombre">✏️</button>
+        <button class="save-btn" id="sbtn_${s.id}" onclick="saveStudentName('${s.id}')" title="Guardar nombre"
+                style="display:none;background:rgba(22,163,74,.2);border:1px solid rgba(22,163,74,.4);
+                color:#4ade80;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:.85rem;">💾</button>
+        <button class="del-btn"  onclick="deleteStudent('${s.id}')" title="Eliminar alumno">🗑️</button>
       </td>
     </tr>`).join('');
 }
@@ -1448,16 +1452,38 @@ function addStudent(){
 function toggleEditStudent(id){
   const span=document.getElementById('sname_'+id);
   const inp =document.getElementById('sedit_'+id);
-  if(inp.style.display==='none'){span.style.display='none';inp.style.display='';inp.focus();}
-  else saveStudentName(id);
+  const sbtn=document.getElementById('sbtn_'+id);
+  const ebtn=document.getElementById('ebtn_'+id);
+  if(inp.style.display==='none'){
+    span.style.display='none';
+    inp.style.display='';
+    if(sbtn) sbtn.style.display='';
+    if(ebtn) ebtn.style.display='none';
+    inp.focus(); inp.select();
+  } else {
+    saveStudentName(id);
+  }
 }
 function saveStudentName(id){
   const inp=document.getElementById('sedit_'+id);
+  if(!inp || inp.style.display==='none') return; // ya se guardó
   const name=inp.value.trim();
-  if(!name)return;
+  if(!name) return;
   const s=STATE.students.find(x=>x.id===id);
-  if(s){s.name=name;saveLocal();renderStudents();showToast('✅ Nombre actualizado');
-    if(getApiUrl()) doUpload(false);}
+  if(s){
+    s.name=name;
+    saveLocal();
+    // Actualizar span en lugar de re-renderizar (evita perder foco en móvil)
+    const span=document.getElementById('sname_'+id);
+    const sbtn=document.getElementById('sbtn_'+id);
+    const ebtn=document.getElementById('ebtn_'+id);
+    if(span){ span.textContent=name; span.style.display=''; }
+    inp.style.display='none';
+    if(sbtn) sbtn.style.display='none';
+    if(ebtn) ebtn.style.display='';
+    showToast('✅ '+name+' — nombre guardado','success');
+    if(getApiUrl()) doUpload(false);
+  }
 }
 function deleteStudent(id){
   if(!confirm('¿Eliminar este alumno? Se borrarán sus calificaciones.'))return;
