@@ -1657,7 +1657,11 @@ function renderWeightRow(){
       <label>${CRIT_LABELS[c]}</label>
       <input type="number" id="w_${c}" value="${w[c]}" min="0" max="100" onchange="onWeightChange()">
     </div>`).join('')+
-    `<div class="weight-total ${Math.abs(sum-100)<.1?'ok':'bad'}" id="wTotal">Total: ${sum}%</div>`;
+    `<div class="weight-total ${Math.abs(sum-100)<.1?'ok':'bad'}" id="wTotal">Total: ${sum}%</div>
+     <button id="wSaveBtn" onclick="saveWeightsNow()"
+       style="padding:7px 16px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer;
+              border:1px solid rgba(99,102,241,.45);background:rgba(99,102,241,.18);color:#a5b4fc;
+              transition:all .15s;white-space:nowrap;">💾 Guardar %</button>`;
 }
 function onWeightChange(){
   const w={};
@@ -1666,8 +1670,32 @@ function onWeightChange(){
   document.getElementById('wTotal').textContent='Total: '+sum+'%';
   document.getElementById('wTotal').className='weight-total '+(Math.abs(sum-100)<.1?'ok':'bad');
   STATE.weights[wKey()]=w; saveLocal();
+  // Marcar botón como pendiente de guardar
+  const btn=document.getElementById('wSaveBtn');
+  if(btn){ btn.textContent='💾 Guardar %'; btn.style.borderColor='rgba(251,191,36,.6)';
+    btn.style.background='rgba(251,191,36,.15)'; btn.style.color='#fbbf24'; }
   if(getApiUrl()){ clearTimeout(window._wUploadTimer);
     window._wUploadTimer=setTimeout(()=>doUpload(false),2000); }
+}
+function saveWeightsNow(){
+  const w={};
+  CRITERIA.forEach(c=>w[c]=parseFloat(document.getElementById('w_'+c).value)||0);
+  const sum=CRITERIA.reduce((a,c)=>a+w[c],0);
+  if(Math.abs(sum-100)>0.1){
+    showToast('⚠️ Los porcentajes deben sumar 100% (actual: '+sum+'%)','error'); return;
+  }
+  STATE.weights[wKey()]=w; saveLocal();
+  renderGradesTable(); // recalcular tabla con nuevos pesos
+  if(getApiUrl()) doUpload(false);
+  const btn=document.getElementById('wSaveBtn');
+  if(btn){ btn.textContent='✅ Guardado';
+    btn.style.borderColor='rgba(22,163,74,.4)';
+    btn.style.background='rgba(22,163,74,.18)'; btn.style.color='#4ade80';
+    setTimeout(()=>{ btn.textContent='💾 Guardar %';
+      btn.style.borderColor='rgba(99,102,241,.45)';
+      btn.style.background='rgba(99,102,241,.18)'; btn.style.color='#a5b4fc'; },2000);
+  }
+  showToast('✅ Porcentajes guardados — '+curSubject+' Bim '+curBim,'success');
 }
 
 /* ── Tabla de captura (NUEVA — 1 campo por criterio) ── */
