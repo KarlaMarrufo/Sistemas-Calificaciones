@@ -1326,7 +1326,7 @@ function onAppStart(){
 function applyRoleUI(){
   const isAdmin = currentUser && currentUser.role==='admin';
   // Pestañas visibles según rol
-  const adminOnly = ['nav-usuarios','nav-sync','nav-config','nav-aciertos'];
+  const adminOnly = ['nav-usuarios','nav-sync','nav-config'];
   adminOnly.forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
